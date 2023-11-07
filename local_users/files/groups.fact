@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+
+import grp
+import json
+
+groups = {
+    group.gr_name: dict(gid=group.gr_gid, members=group.gr_mem)
+    for group in grp.getgrall()}
+
+print(json.dumps(groups, indent=4))

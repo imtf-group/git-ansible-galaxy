@@ -1,0 +1,3 @@
+---
+hs5_install_dir: /opt/hs5
+hs5_service_action: install

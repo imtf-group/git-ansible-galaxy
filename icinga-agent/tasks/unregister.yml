@@ -1,0 +1,28 @@
+---
+- name: check if the node is present in Icinga
+  uri:
+    headers:
+      Accept: 'application/json'
+    force_basic_auth: true
+    url_username: "{{ icingaweb_user }}"
+    url_password: "{{ icingaweb_pass }}"
+    url: "https://{{ icinga_server }}/icingaweb2/director/host?name={{ node_name }}"
+  register: node_api_get
+  failed_when: false
+  delegate_to: localhost
+  become: false
+
+- name: delete the node from Icingaweb
+  uri:
+    headers:
+      Accept: 'application/json'
+    force_basic_auth: true
+    url_username: "{{ icingaweb_user }}"
+    url_password: "{{ icingaweb_pass }}"
+    url: "https://{{ icinga_server }}/icingaweb2/director/host?name={{ node_name }}"
+    method: DELETE
+  when: node_api_get.status == 200
+  notify: commit changes to icinga
+  changed_when: true
+  delegate_to: localhost
+  become: false

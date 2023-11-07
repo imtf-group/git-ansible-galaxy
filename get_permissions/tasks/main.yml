@@ -1,0 +1,29 @@
+---
+- stat:
+    path: "{{ install_dir }}"
+  register: st_install_dir
+  become: no
+  when: sudo_rights is not defined
+  tags: always
+
+- name: "directory {{ install_dir }} creation"
+  file:
+    path: "{{ install_dir }}"
+    state: directory
+    recurse: yes
+  register: cr_dir
+  ignore_errors: yes
+  when: not st_install_dir.stat.exists and sudo_rights is not defined
+  tags: always
+
+- set_fact:
+    sudo_rights: "{{ cr_dir is failed or (st_install_dir.stat.exists and not st_install_dir.stat.writeable) }}"
+  when: sudo_rights is not defined
+  tags: always
+
+- file:
+    path: "{{ install_dir }}"
+    state: directory
+    recurse: yes
+  become: "{{ sudo_rights }}"
+  tags: always

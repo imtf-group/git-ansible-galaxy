@@ -1,0 +1,47 @@
+---
+sg_dict:
+  - is_public: True
+    id: "{{ (security_group|d('sg_external')).split(',') }}"
+  - is_public: False
+    id: "{{ (security_group|d('sg_from_imtf')).split(',') }}"
+
+product_dict:
+  - Adapter
+  - ICOS
+  - CCM
+  - FM
+  - ACM v2
+  - ACM v3
+  - Find-it PC
+  - I-match v5
+  - I-match v6
+  - I-match v7
+  - Siron AFCS
+  - Hypersuite/5
+  - MedStandards
+  - ZV/2
+  - DevOps
+
+environmenttype_dict:
+  - DEMO
+  - EXT
+  - INFRA
+  - REF
+  - TEST
+
+url_dict:
+  CCM: "http://{{ instance_name_lower }}.imtf-devops.com:8181/login"
+  "ACM v3": "http://{{ instance_name_lower }}.imtf-devops.com:8181/login"
+  "ACM v2": "https://{{ instance_name_lower }}.imtf-devops.com/case2/#/login?next=/"
+  "I-match v6": "http://{{ instance_name_lower }}.imtf-devops.com:8080/index.html"
+  "Find-it PC": "https://{{ instance_name_lower }}.imtf-devops.com:8080/findit/detectTopics.html"
+
+role_dict:
+  "I-match v6":
+    TEST: ImtfImatchTestServerRole
+    REF: ImtfImatchTestServerRole
+  "I-match v7":
+    TEST: ImtfImatchTestServerRole
+    REF: ImtfImatchTestServerRole
+  DevOps:
+    INFRA: ImtfInfrastructureServerRole

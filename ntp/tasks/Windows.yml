@@ -1,0 +1,4 @@
+---
+- name: "set timezone as {{ timezone_dict[timezone] }}"
+  win_timezone:
+    timezone: "{{ timezone_dict[timezone] }}"

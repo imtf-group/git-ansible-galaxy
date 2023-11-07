@@ -1,0 +1,268 @@
+---
+- name: check variables are defined
+  assert:
+    that:
+      - tag_customer is defined
+      - tag_product is defined
+      - tag_responsible is defined
+      - tag_description is defined
+
+- name: check that tag_product value is correct
+  assert:
+    that: tag_product in product_dict
+    fail_msg: "tag_product value must be one of: {{ product_dict }}"
+
+- name: check that tag_environmenttype value is correct
+  assert:
+    that: tag_environmenttype in environmenttype_dict
+    fail_msg: "tag_environmenttype value must be one of: {{ environmenttype_dict }}"
+
+- name: retrieve template info
+  proxmox_info:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    filters:
+      name: "{{ image_name }}"
+  register: image_details
+
+- name: check if the VM already exists
+  proxmox_info:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    filters:
+      "tag:Name": "{{ instance_name }}"
+  register: proxmox_existing
+
+- name: get current date
+  setup:
+    filter: ansible_date_time
+
+- block:
+    - name: set instance sizing (multi-server)
+      set_fact:
+        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d(other_volumes)|length) %}{% set vols = vols.append({'size': (item.volumes|d(other_volumes))[i], 'device': 'scsi' + (i + 1)|string}) %}{% endfor %}{{ instance_details|default([]) + [{
+          'root_volume': item.root_volume|d(root_volume|d(image_details.servers[0].disks.scsi0.size)),
+          'volumes': vols,
+          'tags': {'Index': item.id, 'Name': instance_name},
+          'type': item.type|d(instance_type),
+          'image': item.ami_id|d(image_name),
+          'name': instance_name + '-' + item.id|string }] }}"
+      when: num_servers|int > 1
+      loop: "{{ server_opts|flatten(levels=1) }}"
+
+    - name: set instance sizing (mono-server)
+      set_fact:
+        instance_details: "{% set vols = [] %}{% for i in range(other_volumes|length) %}{% set vols = vols.append({'size': other_volumes[i], 'device': 'scsi' + (i + 1)|string}) %}{% endfor %}{{ instance_details|default([]) + [{
+          'root_volume': root_volume|d(image_details.servers[0].disks.scsi0.size),
+          'volumes': vols,
+          'tags': {'Name': instance_name},
+          'type': item.type|d(instance_type),
+          'image': item.ami_id|d(image_name),
+          'name': instance_name }] }}"
+      when: num_servers|int == 1
+      loop: "{{ server_opts|flatten(levels=1) }}"
+
+    - name: prepare tags for instance
+      set_fact:
+        instance_tags: "{{ instance_tags|combine({item.key: vars[item.value]}) }}"
+      when: item.value in vars
+      loop:
+        - { key: Name, value: instance_name }
+        - { key: URL, value: tag_url }
+        - { key: Customer, value: tag_customer }
+        - { key: Product, value: tag_product }
+        - { key: Responsible, value: tag_responsible }
+        - { key: Project, value: tag_project }
+        - { key: Description, value: tag_description }
+
+    - name: add URL tag according to Product tag
+      set_fact:
+        instance_tags: "{{ instance_tags|combine({'URL': url_dict[tag_product]}) }}"
+      when:
+        - "'URL' not in instance_tags"
+        - tag_product in url_dict
+
+    - name: instance creation
+      proxmox_kvm:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.name }}"
+        clone: "{{ item.image }}"
+        state: present
+        ostype: "{% if 'windows' in item.image %}win10{% else %}l26{% endif %}"
+        timeout: 0
+      register: proxmox_new
+      loop: "{{ instance_details }}"
+
+    - name: wait until the servers are created
+      proxmox_async_status:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        node: "{{ item.node }}"
+        task_id: "{{ item.task_id }}"
+      register: creation_result
+      until:
+        - creation_result is not failed
+        - creation_result.status == 'stopped'
+        - creation_result.exitstatus == 'OK'
+      retries: 50
+      delay: 20
+      when: proxmox_new is changed
+      loop: "{{ proxmox_new.results }}"
+
+    - name: wait for the VM appears in cluster
+      wait_for:
+        timeout: 10
+      when: proxmox_new is changed
+
+    - name: Apply tags to the instances
+      proxmox_tag:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.name }}"
+        state: present
+        tags: "{{ item.tags|combine(instance_tags) }}"
+      loop: "{{ instance_details }}"
+
+    - name: resize system drive
+      proxmox_vol:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.name }}"
+        size: "{{ item.root_volume }}"
+        device: scsi0
+        state: present
+      loop: "{{ instance_details }}"
+
+    - name: add new drives
+      proxmox_vol:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.0.name }}"
+        size: "{{ item.1.size }}"
+        device: "{{ item.1.device }}"
+        state: present
+      loop: "{{ query('subelements', instance_details|d([]), 'volumes') }}"
+
+    - name: update hardware
+      proxmox_kvm:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        hotplug: disk
+        sockets: "{{ instance_dict[item.type].sockets }}"
+        vcpus: "{{ instance_dict[item.type].cores }}"
+        memory: "{{ instance_dict[item.type].memory }}"
+        bootdisk: scsi0
+        boot: cd
+        name: "{{ item.name }}"
+        update: true
+        state: present
+      loop: "{{ instance_details }}"
+
+    - name: start servers
+      proxmox_kvm:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.name }}"
+        state: started
+      loop: "{{ instance_details }}"
+
+    - name: Wait until the QEMU agents are up
+      proxmox_wait_for_agent:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        name: "{{ item.name }}"
+      loop: "{{ instance_details }}"
+
+  when: proxmox_existing.servers|length == 0 or force|default(False)|bool
+
+- block:
+    - name: start servers
+      proxmox_kvm:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        vmid: "{{ item.vmid }}"
+        state: started
+      loop: "{{ proxmox_existing.servers }}"
+
+    - name: Wait until the QEMU agents are up
+      proxmox_wait_for_agent:
+        api_host: "{{ proxmox.host }}"
+        api_user: "{{ proxmox.user }}"
+        api_password: "{{ proxmox.password }}"
+        vmid: "{{ item.vmid }}"
+      loop: "{{ proxmox_existing.servers }}"
+
+  when: proxmox_existing.servers|length > 0 and not force|default(False)|bool
+
+- name: retrieve IPs
+  proxmox_info:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    filters:
+      "tag:Name": "{{ instance_name }}"
+  register: proxmox_existing
+
+- name: add server to dns server
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    command: create
+    zone: imtf-devops.com
+    record: "{{ item.0.tags['Name'] }}-{{ item.0.tags['Index'] }}.imtf-devops.com"
+    ttl: 300
+    type: A
+    private_zone: "{{ item.1 }}"
+    overwrite: true
+    value: "{{ item.0.ip_adresses[0] }}"
+  when:
+    - "'Index' in item.0.tags"
+    - "'Name' in item.0.tags"
+  loop: "{{ proxmox_existing.servers|product([True, False])|list }}"
+- name: add server to dns server
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    command: create
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name) }}.imtf-devops.com"
+    ttl: 300
+    type: A
+    private_zone: "{{ item.1 }}"
+    overwrite: true
+    value: "{{ item.0.ip_adresses[0] }}"
+  when: "'Index' not in item.0.tags or item.0.tags['Index']|int == num_servers|int - 1"
+  loop: "{{ proxmox_existing.servers|product([True, False])|list }}"
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}-{{ item.tags['Index'] }}"
+    group: "{{ host_group }}"
+    ansible_host: "{{ item.ip_adresses[0] }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+    tag_index: "{{ item.tags['Index'] }}"
+  when: "'Index' in item.tags"
+  loop: "{{ proxmox_existing.servers }}"
+  changed_when: false
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}"
+    group: remote
+    ansible_host: "{{ item.ip_adresses[0] }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+  when: "'Index' not in item.tags"    
+  loop: "{{ proxmox_existing.servers }}"
+  changed_when: false

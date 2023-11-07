@@ -1,0 +1,26 @@
+---
+instance_type: t3a.medium
+shutdown_behavior: stop
+image_name: imtf-ubuntu-bionic
+key_pair: "{{ (ansible_ssh_private_key_file|d('install-aws-key.pem') | basename).split('.')[0] }}"
+ec2_action: create
+is_public: False
+aws_region: eu-west-1
+other_volumes: []
+tag_schedule: on-demand
+tag_maintainer: Jean-Baptiste Langlois
+tag_needed_until: "{{ ansible_date_time.date }}"
+tag_environmenttype: "{% if is_public|bool %}EXT{% else %}TEST{% endif %}"
+instance_role: "{{ role_dict[tag_product][tag_environmenttype]|d('ImtfServerRole') }}"
+root_volume_size: 15
+server_opts:
+  - type: "{{ instance_type }}"
+instance_tags:
+  Deployment_date: "{{ ansible_date_time.date }}"
+  LastLaunchDate: "{{ ansible_date_time.date }}"
+  Schedule: "{{ tag_schedule }}"
+  Maintainer: "{{ tag_maintainer }}"
+  Needed_until: "{{ tag_needed_until }}"
+  EnvironmentType: "{{ tag_environmenttype }}"
+
+# ec2_subnet_id to force a subnet

@@ -1,0 +1,20 @@
+---
+- block:
+    - name: copy new motd
+      template:
+        src: 00-header.j2
+        dest: /tmp/header
+        mode: "0755"
+    - name: execute motd binary
+      command: /tmp/header
+      register: motd_content
+    - name: fill /etc/motd file
+      copy:
+        content: "{{ motd_content.stdout }}\n"
+        dest: /etc/motd
+    - name: delete motd binary
+      file:
+        path: /tmp/header
+        state: absent
+  when: can_sudo is success
+  become: true

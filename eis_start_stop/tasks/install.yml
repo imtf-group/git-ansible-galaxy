@@ -1,0 +1,21 @@
+---
+- name: Check if startup.sh exists
+  stat:
+    path: "{{ eis_install_dir }}/bin/startup.sh"
+  register: st_dms_file
+
+- name: Copy systemd unit file
+  template:
+    src: eis.service.j2
+    dest: /lib/systemd/system/eis.service
+    mode: "0644"
+  become: true
+  when: st_dms_file.stat.exists and can_sudo is success
+
+- name: Register eis in systemd
+  systemd:
+    name: eis
+    enabled: true
+    daemon_reload: true
+  become: true
+  when: st_dms_file.stat.exists and can_sudo is success

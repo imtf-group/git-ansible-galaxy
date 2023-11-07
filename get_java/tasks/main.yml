@@ -1,0 +1,36 @@
+---
+- block:
+    - name: get JAVA_HOME variable value
+      shell: "{{ bash_abspath.stdout }} -l -c 'echo $JAVA_HOME'"
+      register: java_from_env
+      changed_when: false
+
+    - name: set java_home variable from user env variables
+      set_fact:
+        java_home: "{{ java_from_env.stdout }}"
+      when: java_from_env.stdout
+
+    - name: retrieve default java binary
+      command: which java
+      register: java_location
+      changed_when: false
+
+    - name: retrieve absolute path for java binary
+      command: "readlink -f {{ java_location.stdout }}"
+      register: java_from_file
+      changed_when: false
+
+    - name: set java_home variable from default java location
+      set_fact:
+        java_home: "{{ java_from_file.stdout|dirname|dirname }}"
+  when: java_home is not defined
+
+- name: Get java version
+  shell: "{{ java_home }}/bin/java -version 2>&1"
+  register: java_version
+  changed_when: false
+
+- name: Check if java version is equal or greater than 1.8
+  fail:
+    msg: "Java version must be equal or greater than 1.8"
+  when: java_version.stdout_lines[0].split('"')[1] is not version('1.8.0', '>=')

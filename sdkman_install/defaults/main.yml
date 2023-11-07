@@ -1,0 +1,8 @@
+---
+sdkman_install_dir: /var/jenkins_home
+sdkman_action: install
+sdkman_sdk_list:
+  - name: java
+    versions:
+      - 11.0.14-zulu
+      - 17.0.7-tem

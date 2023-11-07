@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+#
+
+[Unit]
+Description=EIS
+After=network.target
+
+[Service]
+Type=forking
+User={{ install_user|d('ubuntu') }}
+ExecStart={{ eis_install_dir }}/bin/startup.sh
+ExecStop={{ eis_install_dir }}/bin/shutdown.sh
+Environment=JAVA_HOME={{ java_home }}
+TimeoutSec=180
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

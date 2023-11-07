@@ -1,0 +1,14 @@
+{% if tag_product is defined %}
++ : {{ admin_user_dict[ansible_os_family] }} : ALL
++ : jenkins : ALL
++ : (technical) : ALL
++ : (awsjenkinsadmins) : ALL
+{% if tag_product in product_groups_dict %}
+{% for group in product_groups_dict[tag_product] %}
++ : ({{ group }}) : ALL
+{% endfor %}
+{% endif %}
+- : ALL : ALL
+{% else %}
++ : ALL : ALL
+{% endif %}

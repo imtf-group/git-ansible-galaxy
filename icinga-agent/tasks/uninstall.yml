@@ -1,0 +1,5 @@
+---
+- include: "uninstall-{{ ansible_os_family }}.yml"
+
+- name: unregister from icinga server
+  import_tasks: unregister.yml

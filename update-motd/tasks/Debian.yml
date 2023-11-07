@@ -1,0 +1,20 @@
+---
+- block:
+    - name: search for motd files
+      find:
+        path: /etc/update-motd.d
+        file_type: any
+      register: motd
+    - name: delete all the motd files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      when: item.path != '/etc/update-motd.d/00-header'
+      loop: "{{ motd.files }}"
+    - name: install new motd
+      template:
+        src: 00-header.j2
+        dest: /etc/update-motd.d/00-header
+        mode: "0755"
+  when: can_sudo is success
+  become: true

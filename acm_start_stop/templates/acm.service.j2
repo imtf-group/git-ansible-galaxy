@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+#
+
+[Unit]
+Description=ICOS3
+After=network.target
+
+[Service]
+Type=forking
+User={{ install_user|d('ubuntu') }}
+{% for condition in acm_start_conditions %}
+ExecStartPre=nc -vz {{ condition.host|d('localhost') }} {{ condition.port }}
+{% endfor %}
+ExecStart={{ install_dir }}/apps/bin/dms.sh start
+ExecStop={{ install_dir }}/apps/bin/dms.sh stop
+Environment=BASE_INSTALL_DIR={{ install_dir }}
+Environment=JAVA_HOME={{ java_home }}
+TimeoutSec=360
+LimitNOFILE=65000
+LimitNPROC=65000
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

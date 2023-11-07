@@ -1,0 +1,38 @@
+---
+- name: check if DMS is already installed
+  stat:
+    path: "{{ install_dir }}/apps/bin/dms.sh"
+  tags: always
+  register: st_dms
+
+- import_tasks: install.yml
+  when: not st_dms.stat.exists
+
+- name: Exits if DMS cannot be found
+  fail:
+    msg: "The requested command cannot be executed because dms.sh cannot be found"
+  when: not st_dms.stat.exists
+  tags: [never, stop, start]
+
+- name: Start DMS
+  command: "{{ install_dir }}/apps/bin/dms.sh start"
+  tags: [never, start]
+  environment:
+    BASE_INSTALL_DIR: "{{ install_dir }}"
+
+- name: Stop DMS
+  command: "{{ install_dir }}/apps/bin/dms.sh stop"
+  tags: [never, stop, uninstall]
+  when: st_dms.stat.exists
+  register: dms_stop
+  until: dms_stop.rc == 0
+  environment:
+    BASE_INSTALL_DIR: "{{ install_dir }}"
+
+- name: Uninstall DMS and installer files
+  file:
+    path: "{{ item }}"
+    state: absent
+  tags: [never, uninstall]
+  loop:
+    - "{{ install_dir }}"

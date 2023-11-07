@@ -1,0 +1,90 @@
+---
+- name: list available services
+  service_facts:
+  become: true
+
+- name: unregister systemd bootup
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  become: true
+  when: item in ansible_facts.services
+  loop:
+    - icinga2
+    - icinga-agent
+
+- name: uninstall icinga2 agent
+  apt:
+    name:
+      - icinga2
+      - icinga2-bin
+      - icinga2-common
+    state: absent
+    force_apt_get: true
+  become: true
+  register: apt_action
+  retries: 100
+  until: >
+    apt_action is success or
+    ('Failed to lock apt for exclusive operation' not in apt_action.msg
+    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+- name: apt autoremove
+  apt:
+    autoremove: true
+  become: true
+  register: apt_action
+  retries: 100
+  until: >
+    apt_action is success or
+    ('Failed to lock apt for exclusive operation' not in apt_action.msg
+    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+- name: delete the certificate
+  file:
+    path: /var/lib/icinga2/certs
+    state: absent
+  become: true
+
+- name: delete the configuration
+  file:
+    path: /etc/icinga2
+    state: absent
+  become: true
+
+- name: delete icinga2 cache
+  file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - /var/cache/icinga2
+    - /var/lib/icinga2
+    - /var/log/icinga2
+    - /etc/icinga2
+
+- name: search for additional icinga install files
+  find:
+    path: /var
+    pattern: "icinga2*"
+    recurse: true
+    file_type: file
+  register: var_icinga2
+
+- name: delete remaining install files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  become: true
+  loop: "{{ var_icinga2.files }}"
+
+- name: delete remaining install files
+  file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - /etc/systemd/system/icinga2.service
+    - /etc/systemd/system/icinga-agent.service
+    - /usr/lib/nagios/icinga-agent.sh

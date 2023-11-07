@@ -1,0 +1,12 @@
+---
+- name: check is current user has sudo rights
+  command: /bin/true
+  become: true
+  changed_when: false
+  ignore_errors: true
+  register: can_sudo
+  tags: always
+
+- import_tasks: uninstall.yml
+  tags: [never, uninstall]
+- import_tasks: install.yml

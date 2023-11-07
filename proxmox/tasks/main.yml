@@ -1,0 +1,6 @@
+---
+- name: check if a instance name has been specified
+  assert:
+    that: instance_name is defined
+
+- include_tasks: "{{ proxmox_action }}.yml"

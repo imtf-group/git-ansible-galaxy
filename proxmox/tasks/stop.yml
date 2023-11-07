@@ -1,0 +1,35 @@
+---
+- name: check if the VM already exists
+  proxmox_info:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    filters:
+      "tag:Name": "{{ instance_name }}"
+  register: proxmox_existing
+
+- name: stop servers
+  proxmox_kvm:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    vmid: "{{ item.vmid }}"
+    state: stopped
+    timeout: 0
+  register: proxmox_stop
+  loop: "{{ proxmox_existing.servers|d([]) }}"
+- name: wait until the servers are stopped
+  proxmox_async_status:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    task_id: "{{ item.task_id }}"
+  when: "'task_id' in item"
+  register: creation_result
+  until:
+    - creation_result is not failed
+    - creation_result.status == 'stopped'
+    - creation_result.exitstatus == 'OK'
+  retries: 50
+  delay: 20
+  loop: "{{ proxmox_stop.results }}"

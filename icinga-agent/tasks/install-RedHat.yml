@@ -1,0 +1,85 @@
+---
+- block:
+    - name: get api ticket
+      uri:
+        headers:
+          Accept: 'application/json'
+        force_basic_auth: true
+        url_username: "{{ icingaweb_user }}"
+        url_password: "{{ icingaweb_pass }}"
+        url: "https://{{ icinga_server }}/icingaweb2/director/host/ticket?name={{ node_name }}"
+        return_content: true
+      register: api_ticket
+      delegate_to: localhost
+      become: false
+      ignore_errors: true
+
+    - name: install Icinga EPEL repo
+      dnf:
+        name: "https://packages.icinga.com/epel/icinga-rpm-release-{{ ansible_distribution_major_version }}-latest.noarch.rpm"
+        state: present
+
+    - name: Enable PowerTools repository
+      yum_repository:
+        name: CentOS-powertools
+        description: CentOS Stream $releasever - PowerTools
+        baseurl: http://mirror.centos.org/centos/$releasever-stream/PowerTools/$basearch/os/
+        enabled: true
+        gpgcheck: true
+        state: present
+        gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+      when: ansible_distribution_major_version|int >= 8
+
+    - name: install icinga2 agent
+      dnf:
+        name:
+          - epel-release
+          - icinga2
+          - nagios-plugins-all
+        state: present
+
+    - name: create ssl certificate dir
+      file:
+        path: /var/lib/icinga2
+        state: directory
+
+    - name: copy agent installation script
+      template:
+        src: icinga2-agent-kickstart.bash.j2
+        dest: /tmp/icinga2-agent-kickstart.bash
+        mode: "0755"
+      when: api_ticket is not failed
+
+    - name: install icinga2 agent
+      command: /tmp/icinga2-agent-kickstart.bash
+      args:
+        creates: "/var/lib/icinga2/certs/{{ node_name }}.key"
+      notify: restart icinga2 service
+      when: api_ticket is not failed
+
+    - name: add additional check scripts
+      copy:
+        src: "{{ item }}"
+        dest: "/usr/lib64/nagios/plugins/{{ item|basename }}"
+        mode: "0755"
+      loop: "{{ query('fileglob', 'files/*') }}"
+      when: api_ticket is not failed
+
+    - name: add script to register at boot
+      template:
+        src: icinga-agent.sh.j2
+        dest: "/usr/lib64/nagios/icinga-agent.sh"
+        mode: "0755"
+      notify: restart icinga-agent
+      when: api_ticket is not failed
+
+    - name: add systemd unit file
+      template:
+        src: icinga-agent.service.j2
+        dest: /etc/systemd/system/icinga-agent.service
+        mode: "0600"
+      when: api_ticket is not failed
+      notify: restart icinga-agent
+      vars:
+        nagios_path: /usr/lib64/nagios
+  become: true

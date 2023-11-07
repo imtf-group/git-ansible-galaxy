@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Nginx
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=on-failure
+ExecStart=/usr/bin/docker run --name nginx_ssl -v {{ nginx_dir }}/etc:/etc/nginx:ro -v {{ nginx_dir }}/cache:/var/cache/nginx -p 80:80 {% for p in nginx_conf %}{% for mapping in p.mappings %}{% if mapping.type|d('port') == 'volume' %}-v {{ mapping.dest }}:{{ mapping.src }}:ro {% endif %}{% endfor %}-p {{ p.port|d(443) }}:{{ p.port|d(443) }} {% endfor %} --rm nginx:1.15-alpine
+ExecStop=/usr/bin/docker stop nginx_ssl
+
+[Install]
+WantedBy=multi-user.target

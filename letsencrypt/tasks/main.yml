@@ -1,0 +1,90 @@
+---
+- name: check that fqdn and email are correctly defined
+  assert:
+    that: fqdn is defined
+
+- name: install keytool
+  package:
+    name: openssl
+    state: present
+
+- name: check if a certificate already exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ fqdn }}/fullchain.pem"
+  register: st_certbot
+
+- name: create CertBot certificate
+  docker_container:
+    name: certbot
+    image: certbot/dns-route53
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/lib/letsencrypt:/var/lib/letsencrypt
+    command: "certonly -n --domains {{ fqdn }} --dns-route53 --agree-tos --email {{ admin_email }}"
+    state: started
+  when: not st_certbot.stat.exists
+
+- name: wait until the certificate is created
+  wait_for:
+    path: "/etc/letsencrypt/live/{{ fqdn }}/fullchain.pem"
+    delay: 5
+    state: present
+  when: not st_certbot.stat.exists
+
+- name: delete CertBot container
+  docker_container:
+    name: certbot
+    state: absent
+  when: not st_certbot.stat.exists
+
+- name: create ssl directory
+  file:
+    path: "{{ ssl_dir }}"
+    state: directory
+    recurse: true
+
+- name: Copy SSL certificates
+  copy:
+    src: "/etc/letsencrypt/live/{{ fqdn }}/{{ item }}"
+    dest: "{{ ssl_dir }}/{{ item }}"
+    remote_src: true
+    mode: "0644"
+  loop:
+    - fullchain.pem
+    - privkey.pem
+
+- name: check if cert-renewal.sh is already there
+  stat:
+    path: /etc/letsencrypt/cert-renewal.sh
+  register: st_certrenew
+
+- name: install certificate renewal script
+  template:
+    src: cert-renewal.sh.j2
+    dest: /etc/letsencrypt/cert-renewal.sh
+    mode: "0755"
+  when: not st_certrenew.stat.exists
+
+- name: add block to copy certs after renewal
+  blockinfile:
+    path: /etc/letsencrypt/cert-renewal.sh
+    block: |
+      EXPORT_DIR={{ ssl_dir }}
+      CERT_DIR=/etc/letsencrypt/live/{{ fqdn }}
+      for fi in $EXPORT_DIR/*.pem; do
+        mv $fi $fi.old
+      done
+      for fi in privkey.pem fullchain.pem; do
+        cp $CERT_DIR/$fi $EXPORT_DIR/$fi
+      done
+    marker: "# {mark} COPY CERTIFICATE FOR {{ fqdn }}"
+    state: present
+
+- name: Crontab creation
+  cron:
+    name: renew certificate
+    minute: "50"
+    hour: "17"
+    job: "/etc/letsencrypt/cert-renewal.sh > /dev/null"
+    state: present
+

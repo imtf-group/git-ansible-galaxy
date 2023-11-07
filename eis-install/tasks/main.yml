@@ -1,0 +1,43 @@
+---
+- name: check that variables are defined
+  assert:
+    that: profile_environment is defined
+
+- name: create destination directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+  loop:
+    - "{{ install_dir }}"
+    - "{{ package_dir }}"
+
+- name: import from maven eis artifact
+  maven_artifact:
+    group_id: "com.imtf.customers.{{ eis_customer }}"
+    artifact_id: eis-package
+    repository_url: "https://{{ nexus_server }}/repository/{{ nexus_repository }}"
+    extension: zip
+    version: "{{ eis_version }}"
+    dest: "{{ package_dir }}/eis-package-{{ eis_version }}.zip"
+    state: present
+
+- name: Unarchive eis package package
+  unarchive:
+    src: "{{ package_dir }}/eis-package-{{ eis_version }}.zip"
+    dest: "{{ package_dir }}"
+    remote_src: true
+    creates: "{{ package_dir }}/bin/install.sh"
+
+- name: Correct install script rights
+  file:
+    path: "{{ package_dir }}/bin/install.sh"
+    state: file
+    mode: "0755"
+
+- name: Install EIS
+  command: "{{ package_dir }}/bin/install.sh {{ profile_environment }}"
+  args:
+    creates: "{{ install_dir }}/hs5-eis-connector-tomcat"
+  environment:
+    HS5_APPS_HOME: "{{ install_dir }}"

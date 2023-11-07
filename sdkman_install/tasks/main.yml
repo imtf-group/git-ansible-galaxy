@@ -1,0 +1,2 @@
+---
+- include: "{{ sdkman_action }}.yml"

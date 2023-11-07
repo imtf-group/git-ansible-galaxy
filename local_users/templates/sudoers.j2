@@ -1,0 +1,7 @@
+{% if tag_product == 'DevOps' %}
+%admins ALL=(ALL) NOPASSWD:ALL
+{% elif tag_product in product_groups_dict %}
+{% for group in product_groups_dict[tag_product] %}
+%{{ group }} ALL=(ALL) NOPASSWD:ALL
+{% endfor %}
+{% endif %}

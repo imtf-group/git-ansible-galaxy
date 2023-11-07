@@ -1,0 +1,32 @@
+---
+- name: restart icinga2 service
+  systemd:
+    name: icinga2
+    state: restarted
+    daemon_reload: true
+    enabled: true
+    masked: false
+  become: true
+  failed_when: false
+
+- name: restart icinga-agent
+  systemd:
+    name: icinga-agent
+    enabled: true
+    state: restarted
+    daemon-reload: true
+  become: true
+
+- name: commit changes to icinga
+  uri:
+    headers:
+      Accept: 'application/json'
+    force_basic_auth: true
+    url_username: "{{ icingaweb_user }}"
+    url_password: "{{ icingaweb_pass }}"
+    url: "https://{{ icinga_server }}/icingaweb2/director/config/deploy"
+    method: POST
+  changed_when: true
+  delegate_to: localhost
+  become: false
+  run_once: true

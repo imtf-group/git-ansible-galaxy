@@ -1,0 +1,10 @@
+---
+- name: stop instances
+  ec2_instance:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+      instance-state-name: [ "running" ]
+    state: stopped

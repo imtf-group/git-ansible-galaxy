@@ -1,0 +1,15 @@
+---
+allow_duplicates: true
+galaxy_info:
+  author: Jean-Baptiste Langlois (jla@imtf.ch)
+  description: Generate dynamically an ansible inventory
+  company: IMTF
+  license: Proprietary
+  min_ansible_version: 2.4
+  platforms:
+    - name: RHEL
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all

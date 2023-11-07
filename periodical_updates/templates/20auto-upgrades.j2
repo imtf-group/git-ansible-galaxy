@@ -1,0 +1,2 @@
+APT::Periodic::Update-Package-Lists "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_list_freq }}{% endif %}";
+APT::Periodic::Unattended-Upgrade "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_critical_freq }}{% endif %}";

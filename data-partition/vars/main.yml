@@ -1,0 +1,14 @@
+---
+partition_pkg_dict:
+  Debian:
+    - python3-parted
+    - xfsprogs
+  RedHat:
+    - pyparted
+    - xfsprogs
+    - lvm2
+
+os_family_dict:
+  Debian: Linux
+  RedHat: Linux
+  Windows: Windows

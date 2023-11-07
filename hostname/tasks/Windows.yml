@@ -1,0 +1,15 @@
+---
+- name: check that hostname is known
+  assert:
+    that: ansible_hostname is defined
+
+- name: change local hostname
+  win_hostname:
+    name: "{{ hostname|upper|regex_replace('_', '-') }}"
+  when: ansible_hostname != hostname[0:15]|upper|regex_replace('_', '-')
+  register: chg_hostname
+
+- name: reboot windows server
+  win_reboot:
+  when: '"reboot_required" in chg_hostname and chg_hostname.reboot_required|bool'
+

@@ -1,0 +1,7 @@
+---
+- name: check if a inventory name has been chosen
+  fail:
+    msg: "no inventory sources found. Make sure that you use -i option when you run ansible-playbook"
+  when: ansible_inventory_sources[0] == '/etc/ansible/hosts'
+
+- include_tasks: "{{ profile_action }}.yml"

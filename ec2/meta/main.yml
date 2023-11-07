@@ -1,0 +1,15 @@
+---
+allow_duplicates: true
+galaxy_info:
+  author: jla
+  description: Create or delete AWS EC2 instances
+  company: IMTF
+  license: Proprietary
+  min_ansible_version: 2.4
+  platforms:
+    - name: RHEL
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all

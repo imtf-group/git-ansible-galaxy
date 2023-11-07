@@ -1,0 +1,6 @@
+---
+admin_uid: 5500
+admin_gid: 5500
+admin_shell: /bin/bash
+admin_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCgMTVBcxwzA34Fh52fTMlMuftZL96HMKZRzUuIZOt3OhZB+1D42YBmCjAUbTXBQzx5vdAyiVHFCnOyYxRW6bzhdtf8v4ifzIjhNx3hOFS2BHq2LbyEXBexLdziYBsNzJ85DBy6t0ZylQcWPXXa2Jy91S3sUdwSqWiba5f1O7TIR5PdjKbYZb9F1oE7bz1M2VLjCRvxJIW1HFdT99uQ2DuTTEeBAPW3/FtpyAheU2EYxEPHGLncQj/dv3jjgwAh/7Bz/dnmTwfL0tywGkZ2kz/stnYfwfnagseB/IHWEs+GHtSc5uFMp7FA72DVbrsToXheNESLDtfoPdUFfEEz5Cn5 jenkins-aws-key"

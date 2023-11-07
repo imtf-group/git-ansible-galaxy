@@ -1,0 +1,58 @@
+---
+- name: Add a signing key for Docker repo
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: get current architecture
+  command: dpkg --print-architecture
+  args:
+    warn: false
+  register: current_arch
+  changed_when: false
+
+- name: check if GPG key is present
+  stat:
+    path: /etc/apt/keyrings/docker.gpg
+  register: st_docker_gpg
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch={{ current_arch.stdout }}] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable"
+    filename: docker
+    state: present
+    mode: "0644"
+  when: not st_docker_gpg.stat.exists
+
+- name: install prerequisites
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    update_cache: true
+    state: present
+  register: apt_action
+  retries: 100
+  until: >
+    apt_action is success or
+    ('Failed to lock apt for exclusive operation' not in apt_action.msg
+    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+
+- name: install docker
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - python3-pip
+    state: present
+  notify: start docker
+  register: apt_action
+  retries: 100
+  until: >
+    apt_action is success or
+    ('Failed to lock apt for exclusive operation' not in apt_action.msg
+    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)

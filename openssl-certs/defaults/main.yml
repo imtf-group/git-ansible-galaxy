@@ -1,0 +1,4 @@
+---
+ssl_dir: /etc/ssl
+admin_email: jla@imtf.ch
+cert_days: 3650

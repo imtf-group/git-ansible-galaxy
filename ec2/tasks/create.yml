@@ -1,0 +1,343 @@
+---
+- name: search for corresponding AMI
+  ec2_ami_info:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      name: "{{ image_name }}"
+  register: ami_fact
+
+- name: search for corresponding AMI
+  ec2_ami_info:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      name: "{{ item.image_name }}"
+  register: ami_list
+  when: "'image_name' in item"
+  loop: "{{ server_opts|flatten(levels=1) }}"
+
+#- name: Stop if no AMI were found
+#  fail:
+#    msg: "No AMI found among: {{ server_opts|flatten(levels=1)|map(attribute='image_name')|list }}"
+#  when:
+#    - item is not skipped
+#    - ami_list.results|length == 0 or ami_list.results|selectattr('images')|list|length == 0
+
+- name: create AMI list
+  set_fact:
+    ami_array: "{{ ami_array|d({})|combine({item.item.image_name: item.images[0].image_id}) }}"
+  when: item is not skipped
+  loop: "{{ ami_list.results }}"
+
+- name: check variables are defined
+  assert:
+    that:
+      - ami_fact.images|length > 0
+      - tag_customer is defined
+      - tag_product is defined
+      - tag_responsible is defined
+      - tag_description is defined
+
+- name: check that tag_product value is correct
+  assert:
+    that: tag_product in product_dict
+    fail_msg: "tag_product value must be one of: {{ product_dict }}"
+
+- name: check that tag_environmenttype value is correct
+  assert:
+    that: tag_environmenttype in environmenttype_dict
+    fail_msg: "tag_environmenttype value must be one of: {{ environmenttype_dict }}"
+
+- name: check if the instances already exist
+  ec2_instance_info:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+      instance-state-name: [ "running", "stopping", "stopped" ]
+  register: ec2_existing
+
+- name: get current date
+  setup:
+    filter: ansible_date_time
+
+- block:
+    - name: "get the subnet list in {{ aws_region }}"
+      ec2_vpc_subnet_info:
+        aws_access_key: "{{ aws.access_key }}"
+        aws_secret_key: "{{ aws.secret_key }}"
+        region: "{{ aws_region }}"
+      register: ec2_subnet_list
+
+    - name: "check availability-zones in {{ aws_region }}"
+      ec2_instance_info:
+        aws_access_key: "{{ aws.access_key }}"
+        aws_secret_key: "{{ aws.secret_key }}"
+        region: "{{ aws_region }}"
+        filters:
+          subnet-id: "{{ item.id }}"
+      register: inst_list
+      when: "'Name' in item.tags and item.tags['Name'] in ('Private', 'Public')"
+      loop: "{{ ec2_subnet_list.subnets }}"
+
+    - name: set vacancy for the region AZ
+      set_fact:
+        subnet_occupation: "{{ subnet_occupation|d([]) + [{'id': item.item.id, 'zone': item.item.availability_zone, 'count': item.instances|length, 'public': item.item.map_public_ip_on_launch}] }}"
+      when: item is not skipped
+      loop: "{{ inst_list.results }}"
+
+    - name: pick the most available AZ
+      set_fact: 
+        "{{ item.1.var_name }}": "{{ item.0.id }}"
+      when:
+        - item.0.public == item.1.public
+        - item.0.count == subnet_occupation|selectattr('public', 'sameas', item.1.public)|map(attribute='count')|list|min
+      loop: "{{ subnet_occupation|product([{'public': True, 'var_name': 'ec2_public_subnet_id'}, {'public': False, 'var_name': 'ec2_private_subnet_id'}])|list }}"
+
+    - name: set instance sizing (multi-server)
+      set_fact:
+        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'volume_size': item.volumes[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+          'tags': {'Index': item.id, 'Name': instance_name_lower, 'AMIName': item.image_name|d(image_name)},
+          'type': item.type|d(instance_type),
+          'volumes': vols,
+          'root_volume_size': item.root_volume_size|d(root_volume_size) if item.root_volume_size|d(root_volume_size)|int > ami_fact.images[0].block_device_mappings[0].ebs.volume_size|int else ami_fact.images[0].block_device_mappings[0].ebs.volume_size,
+          'image': item.image_id|d(ami_array[item.image_name] if 'image_name' in item else ami_fact.images[0].image_id),
+          'subnet': ec2_subnet_id|d(ec2_private_subnet_id),
+          'is_public': False,
+          'sg': (sg_dict|selectattr('is_public', 'sameas', False)|map(attribute='id')|list)[0] }] }}"
+      when:
+       - server_opts|length > 1
+       - index < server_opts|length - 1
+      loop: "{{ server_opts|flatten(levels=1) }}"
+      loop_control:
+        index_var: index
+    - name: set instance sizing (multi-server)
+      set_fact:
+        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'volume_size': item.volumes[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+          'tags': {'Index': item.id, 'Name': instance_name_lower, 'AMIName': item.image_name|d(image_name)},
+          'type': item.type|d(instance_type),
+          'volumes': vols,
+          'root_volume_size': item.root_volume_size|d(root_volume_size) if item.root_volume_size|d(root_volume_size)|int > ami_fact.images[0].block_device_mappings[0].ebs.volume_size|int else ami_fact.images[0].block_device_mappings[0].ebs.volume_size,
+          'image': item.image_id|d(ami_array[item.image_name] if 'image_name' in item else ami_fact.images[0].image_id),
+          'subnet': ec2_subnet_id|d(ec2_public_subnet_id if is_public|bool else ec2_private_subnet_id),
+          'is_public': is_public|bool,
+          'sg': (sg_dict|selectattr('is_public', 'sameas', is_public|bool)|map(attribute='id')|list)[0] }] }}"
+      when:
+       - server_opts|length > 1
+       - index == server_opts|length - 1
+      loop: "{{ server_opts|flatten(levels=1) }}"
+      loop_control:
+        index_var: index
+    - name: set instance sizing (one-server)
+      set_fact:
+        instance_details: "{% set vols = [] %}{% for i in range(server_opts[0].volumes|d(other_volumes)|length) %}{% set vols = vols.append({'volume_size': (server_opts[0].volumes|d(other_volumes))[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+          'tags': {'Name': instance_name_lower, 'AMIName': server_opts[0].image_name|d(image_name)},
+          'type': server_opts[0].type|d(instance_type),
+          'volumes': vols,
+          'root_volume_size': server_opts[0].root_volume_size|d(root_volume_size|d(0)) if server_opts[0].root_volume_size|d(root_volume_size|d(0))|int > ami_fact.images[0].block_device_mappings[0].ebs.volume_size|int else ami_fact.images[0].block_device_mappings[0].ebs.volume_size,
+          'image': server_opts[0].image_id|d(ami_array[server_opts[0].image_name] if 'image_name' in server_opts[0] else ami_fact.images[0].image_id),
+          'subnet': ec2_subnet_id|d(ec2_public_subnet_id if is_public|bool else ec2_private_subnet_id),
+          'is_public': is_public|bool,
+          'sg': (sg_dict|selectattr('is_public', 'sameas', is_public|bool)|map(attribute='id')|list)[0] }] }}"
+      when: server_opts|length == 1
+    - name: prepare tags for instance
+      set_fact:
+        instance_tags: "{{ instance_tags|combine({item.key: vars[item.value]}) }}"
+      when: item.value in vars
+      loop:
+        - { key: URL, value: tag_url }
+        - { key: Customer, value: tag_customer }
+        - { key: Product, value: tag_product }
+        - { key: Responsible, value: tag_responsible }
+        - { key: Project, value: tag_project }
+        - { key: Description, value: tag_description }
+        - { key: EnvVars, value: tag_envvars }
+
+    - name: add URL tag according to Product tag
+      set_fact:
+        instance_tags: "{{ instance_tags|combine({'URL': url_dict[tag_product]}) }}"
+      when:
+        - "'URL' not in instance_tags"
+        - tag_product in url_dict
+
+    - name: instance creation
+      ec2:
+        aws_access_key: "{{ aws.access_key }}"
+        aws_secret_key: "{{ aws.secret_key }}"
+        region: "{{ aws_region }}"
+        image: "{{ item.image }}"
+        instance_type: "{{ item.type }}"
+        instance_profile_name: "{{ instance_role }}"
+        instance_initiated_shutdown_behavior: "{{ shutdown_behavior }}"
+        key_name: "{{ key_pair }}"
+        vpc_subnet_id: "{{ item.subnet }}"
+        group: "{{ item.sg }}"
+        user_data: "{% if 'windows' not in image_name|lower %}{{ lookup('file', 'user_data.sh') }}{% else %}{{ omit }}{% endif %}"
+        count: 1
+        assign_public_ip: "{{ item.is_public }}"
+        instance_tags: "{{ item.tags|default({})|combine(instance_tags) }}"
+        volumes: "{{ [{'device_name': '/dev/sda1', 'volume_type': 'gp2', 'volume_size': item.root_volume_size, 'delete_on_termination': True}] + item.volumes }}"
+        state: present
+        termination_protection: "{% if tag_environmenttype == 'DEMO' %}true{% else %}false{% endif %}"
+        wait: "{{ volume_id is defined or from_snapshot is defined }}"
+      register: ec2_new
+      loop: "{{ instance_details|default([]) }}"
+
+  when: ec2_existing.instances|length == 0 or force|default(False)|bool
+
+- block:
+    - name: stop newly created instance
+      ec2_instance:
+        aws_access_key: "{{ aws.access_key }}"
+        aws_secret_key: "{{ aws.secret_key }}"
+        region: "{{ aws_region }}"
+        state: stopped
+        instance_ids: "{{ item }}"
+      loop: "{{ ec2_new.results|map(attribute='instance_ids')|list|flatten }}"
+
+    - name: volume attachment
+      ec2_vol:
+        aws_access_key: "{{ aws.access_key }}"
+        aws_secret_key: "{{ aws.secret_key }}"
+        region: "{{ aws_region }}"
+        delete_on_termination: true
+        id: "{{ volume_id|default(omit) }}"
+        snapshot: "{{ from_snapshot|default(omit) }}"
+        device_name: /dev/sdf
+        instance: "{{ item }}"
+        state: present
+      loop: "{{ ec2_new.results|map(attribute='instance_ids')|list|flatten }}"
+  when:
+    - ec2_existing.instances|length == 0
+    - volume_id is defined or from_snapshot is defined
+
+- name: instance running
+  ec2_instance:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+      instance-state-name: [ "pending", "running", "stopping", "stopped" ]
+    state: running
+    wait: true
+  register: ec2_inst
+
+- name: set volume name tag
+  ec2_tag:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    resource: "{{ item.1.ebs.volume_id }}"
+    region: "{{ aws_region }}"
+    state: present
+    tags: "{{ item.0.tags }}"
+  when: item.1.ebs is defined
+  loop: "{{ query('subelements', ec2_inst.instances, 'block_device_mappings') }}"
+
+- name: set network interfaces name tag
+  ec2_tag:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    resource: "{{ item.1.network_interface_id }}"
+    tags: "{{ item.0.tags }}"
+    state: present
+  loop: "{{ query('subelements', ec2_inst.instances, 'network_interfaces') }}"
+  ignore_errors: true
+
+- name: add server to dns server
+  route53:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    command: create
+    zone: imtf-devops.com
+    record: "{{ item.0.tags['Name'] }}-{{ item.0.tags['Index'] }}.imtf-devops.com"
+    ttl: 300
+    type: A
+    private_zone: "{{ item.1 }}"
+    overwrite: true
+    value: "{{ item.0.private_ip_address }}"
+  when:
+    - "'Index' in item.0.tags"
+    - "'Name' in item.0.tags"
+  loop: "{{ ec2_inst.instances|product([True, False])|list }}"
+
+- name: add server to dns server
+  route53:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    command: create
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name_lower) }}.imtf-devops.com"
+    ttl: 300
+    type: A
+    private_zone: "{{ item.1 }}"
+    overwrite: true
+    value: "{{ item.0.private_ip_address }}"
+  when: "'Index' not in item.0.tags or item.0.tags['Index'] == server_opts[-1].id|string"
+  loop: "{{ ec2_inst.instances|product([True, False])|list }}"
+
+- name: add public ip to dns server
+  route53:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    command: create
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name_lower) }}.imtf-devops.com"
+    ttl: 300
+    type: A
+    private_zone: false
+    overwrite: true
+    value: "{{ item.public_ip_address }}"
+  when: item.public_ip_address is defined and item.public_ip_address
+  loop: "{{ ec2_inst.instances }}"
+
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}-{{ item.tags['Index'] }}.imtf-devops.com"
+    group: remote
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+    tag_index: "{{ item.tags['Index'] }}"
+    ansible_shell_type: "{% if 'platform' in item and item.platform == 'windows' %}powershell{% else %}{{ omit }}{% endif %}"
+    ansible_become: "{% if 'platform' in item and item.platform == 'windows' %}false{% else %}true{% endif %}"
+    instance_id: "{{ item.instance_id }}"
+  when: "'Index' in item.tags"
+  loop: "{{ ec2_inst.instances }}"
+  changed_when: false
+
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}.imtf-devops.com"
+    group: remote
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+    ansible_shell_type: "{% if 'platform' in item and item.platform == 'windows' %}powershell{% else %}{{ omit }}{% endif %}"
+    ansible_become: "{% if 'platform' in item and item.platform == 'windows' %}false{% else %}true{% endif %}"
+    instance_id: "{{ item.instance_id }}"
+  when: "'Index' not in item.tags"    
+  loop: "{{ ec2_inst.instances }}"
+  changed_when: false
+- name: "waiting for connection port to open"
+  wait_for:
+    host: "{{ item.private_ip_address }}"
+    port: 22
+    search_regex: OpenSSH
+    state: started
+  loop: "{{ ec2_inst.instances }}"
+
+- name: wait for reboot for new Windows servers
+  wait_for:
+    host: "{{ item.private_ip_address }}"
+    port: 22
+    delay: 240
+    search_regex: OpenSSH
+    state: started
+  when: "ec2_existing.instances|length == 0 and 'platform' in item and item.platform == 'windows'"
+  loop: "{{ ec2_inst.instances }}"

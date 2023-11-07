@@ -1,0 +1,92 @@
+---
+- name: retrieve IPs
+  proxmox_info:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    filters:
+      "tag:Name": "{{ instance_name }}"
+  register: proxmox_existing
+- name: get dns records (multi)
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    state: get
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name) }}-{{ item.tags['Index'] }}.imtf-devops.com"
+    type: A
+  when: "'Index' in item.tags"
+  register: rec
+  loop: "{{ proxmox_existing.servers|default([]) }}"
+- name: delete server from dns server (multi)
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    state: absent
+    zone: imtf-devops.com
+    record: "{{ item.0.set.record }}"
+    ttl: "{{ item.0.set.ttl }}"
+    type: "{{ item.0.set.type }}"
+    value: "{{ item.0.set.value }}"
+    private_zone: "{{ item.1 }}"
+  when:
+    - "'set' in item.0"
+    - item.0.set.record is defined
+  loop: "{{ rec.results|default([])|product([False, True])|list }}"
+- name: get dns records (mono)
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    state: get
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name) }}.imtf-devops.com"
+    type: A
+  register: rec
+- name: delete server from dns server (mono)
+  route53:
+    aws_access_key: "{{ aws.access_key|default(omit) }}"
+    aws_secret_key: "{{ aws.secret_key|default(omit) }}"
+    state: absent
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name) }}.imtf-devops.com"
+    ttl: "{{ rec.set.ttl }}"
+    type: "{{ rec.set.type }}"
+    value: "{{ rec.set.value }}"
+    private_zone: "{{ item }}"
+  when:
+    - "'set' in rec"
+    - rec.set.record is defined
+  loop: [False, True]
+- name: stop servers
+  proxmox_kvm:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    vmid: "{{ item.vmid }}"
+    state: stopped
+    timeout: 0
+  register: proxmox_stop
+  loop: "{{ proxmox_existing.servers|d([]) }}"
+- name: wait until the servers are stopped
+  proxmox_async_status:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    task_id: "{{ item.task_id }}"
+  register: stop_result
+  when: "'task_id' in item"
+  until:
+    - stop_result is not failed
+    - stop_result.status == 'stopped'
+    - stop_result.exitstatus == 'OK'
+  retries: 50
+  delay: 20
+  loop: "{{ proxmox_stop.results }}"
+- name: delete servers
+  proxmox_kvm:
+    api_host: "{{ proxmox.host }}"
+    api_user: "{{ proxmox.user }}"
+    api_password: "{{ proxmox.password }}"
+    vmid: "{{ item.vmid }}"
+    state: absent
+  loop: "{{ proxmox_existing.servers|d([]) }}"

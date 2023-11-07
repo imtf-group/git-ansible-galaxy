@@ -1,0 +1,63 @@
+---
+- name: create docker group
+  group:
+    name: docker
+    gid: 3657
+    state: present
+
+- include: "{{ ansible_os_family }}.yml"
+
+- name: install pip docker
+  pip:
+    name:
+      - pip
+      - docker
+      - requests==2.27.1
+    state: present
+
+- name: Activate Docker API
+  replace:
+    path: /lib/systemd/system/docker.service
+    regexp: 'ExecStart=/usr/bin/dockerd.*$'
+    replace: 'ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock -H tcp://0.0.0.0:2375'
+  notify: start docker
+
+- name: check if docker-compose is installed
+  stat:
+    path: /usr/bin/docker-compose
+  register: st_dc
+
+- name: check docker-compose version
+  shell: /usr/bin/docker-compose version | grep docker-compose | sed 's/^.*version \([^,]*\),.*$/\1/'
+  register: dc_version
+  when: st_dc.stat.exists
+  changed_when: false
+
+- name: delete outdated docker-compose
+  file:
+    path: /usr/bin/docker-compose
+    state: absent
+  when: st_dc.stat.exists and dc_version.stdout is version(docker_compose_version, '<')
+
+- name: Download docker-compose
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-x86_64"
+    dest: /usr/bin/docker-compose
+    mode: "0771"
+    group: docker
+  when: ansible_architecture == 'x86_64'
+
+- name: Install docker-compose via pip
+  pip:
+    name: docker-compose
+    state: latest
+  when: ansible_architecture != 'x86_64' 
+
+- meta: flush_handlers
+
+- name: fix rights for docker socket
+  file:
+    path: /var/run/docker.sock
+    mode: "0666"
+    state: file
+  notify: start docker

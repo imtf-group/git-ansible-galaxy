@@ -1,0 +1,3 @@
+---
+nginx_dir: /opt/nginx
+nginx_conf: []

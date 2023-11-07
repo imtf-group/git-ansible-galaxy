@@ -1,0 +1,100 @@
+---
+- block:
+    - name: get api ticket
+      uri:
+        headers:
+          Accept: 'application/json'
+        force_basic_auth: true
+        url_username: "{{ icingaweb_user }}"
+        url_password: "{{ icingaweb_pass }}"
+        url: "https://{{ icinga_server }}/icingaweb2/director/host/ticket?name={{ node_name }}"
+        return_content: true
+      register: api_ticket
+      delegate_to: localhost
+      become: false
+      ignore_errors: true
+
+    - name: get icinga repo key
+      apt_key:
+        url: https://packages.icinga.com/icinga.key
+        state: present
+
+    - name: add icinga repo to APT
+      apt_repository:
+        repo: "deb http://packages.icinga.com/ubuntu icinga-{{ ansible_distribution_release }} main"
+        state: present
+        filename: icinga-aptrepo
+        mode: "0644"
+
+    - name: install icinga2 packages
+      apt:
+        name:
+          - icinga2
+          - monitoring-plugins
+          - nagios-plugins-contrib
+        force_apt_get: true
+        state: present
+      register: apt_action
+      retries: 100
+      until: >
+        apt_action is success or
+        ('Failed to lock apt for exclusive operation' not in apt_action.msg
+        and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+
+    - name: create ssl certificate dir
+      file:
+        path: /var/lib/icinga2
+        state: directory
+
+    - name: copy agent installation script
+      template:
+        src: icinga2-agent-kickstart.bash.j2
+        dest: /tmp/icinga2-agent-kickstart.bash
+        mode: "0755"
+      when: api_ticket is not failed
+
+    - name: install icinga2 agent
+      command: /tmp/icinga2-agent-kickstart.bash
+      args:
+        creates: "/var/lib/icinga2/certs/{{ node_name }}.key"
+      notify: restart icinga2 service
+      when: api_ticket is not failed
+      register: install_agent
+      ignore_errors: true
+
+    - name: add additional check scripts
+      copy:
+        src: "{{ item }}"
+        dest: "/usr/lib/nagios/plugins/{{ item|basename }}"
+        mode: "0755"
+      loop: "{{ query('fileglob', 'files/*') }}"
+      when:
+        - api_ticket is not failed
+        - install_agent is not skipped
+        - install_agent is not failed
+
+    - name: add script to register at boot
+      template:
+        src: icinga-agent.sh.j2
+        dest: "/usr/lib/nagios/icinga-agent.sh"
+        mode: "0755"
+      notify: restart icinga-agent
+      when:
+        - api_ticket is not failed
+        - install_agent is not skipped
+        - install_agent is not failed
+
+    - name: add systemd unit file
+      template:
+        src: icinga-agent.service.j2
+        dest: /etc/systemd/system/icinga-agent.service
+        mode: "0600"
+      notify: restart icinga-agent
+      when:
+        - api_ticket is not failed
+        - install_agent is not skipped
+        - install_agent is not failed
+      vars:
+        nagios_path: /usr/lib/nagios
+  become: true

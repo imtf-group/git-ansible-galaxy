@@ -1,0 +1,4 @@
+---
+root_install_dir: /usr/local/hypersuite
+eis_install_dir: "{{ root_install_dir }}/hs5-apps/hs5-eis-connector-tomcat"
+eis_service_action: install

@@ -1,0 +1,20 @@
+---
+- name: check bash directory
+  command: which bash
+  register: bash_location
+  changed_when: false
+
+- name: get bash absolute path
+  command: "readlink -f {{ bash_location.stdout }}"
+  register: bash_abspath
+  changed_when: false
+
+- name: get bash version
+  command: "{{ bash_abspath.stdout }} --version"
+  register: bash_version
+  changed_when: false
+
+- name: Check if bash version is equal or greater than 3.0
+  fail:
+    msg: "Bash version must be equal or greater than 3.0"
+  when: bash_version.stdout_lines[0].split()[3] is not version('3.0', '>=')

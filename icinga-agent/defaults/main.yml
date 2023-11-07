@@ -1,0 +1,9 @@
+---
+icinga_server: icinga.imtf-devops.com
+icinga_api_key: 41547287a91bb5beaae16c0c26eedf3c7f15d7bc
+icingaweb_user: icingaadmin
+icingaweb_pass: icinga
+icinga_action: install
+node_name: "{{ inventory_hostname.split('.')[0] }}"
+node_template: "{{ node_template_dict[ansible_os_family] }}"
+update_group: true

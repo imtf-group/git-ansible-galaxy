@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -o posix
+
+function renew_ssh_keys() {
+    local _api_token
+    local _api_url
+    local _api_user
+    local _api_user_home
+    _api_token="{{ ad_gitlab_token }}"
+    _api_url="{{ ad_gitlab_api }}"
+    _api_user=$(whoami)
+    _api_user_home=$(getent passwd "$_api_user" | cut -d : -f 6)
+
+    if ! which curl > /dev/null; then
+        return 0
+    fi
+
+    if ! which jq > /dev/null; then
+        return 0
+    fi
+    if [ -f "$_api_user_home"/.ssh/authorized_keys ]; then
+        rm -f "$_api_user_home"/.ssh/authorized_keys
+    fi
+    if [ ! -d "$_api_user_home"/.ssh ]; then
+        mkdir -m 700 "$_api_user_home"/.ssh
+    fi
+    if [ ! -f "$_api_user_home"/.ssh/authorized_keys ]; then
+        curl -m 3 -s -H "PRIVATE-TOKEN: $_api_token" "$_api_url/users/$_api_user/keys" | jq -r '.[].key?' >> "$_api_user_home"/.ssh/authorized_keys
+    fi
+}
+
+if [ ! -f "$(getent passwd $(whoami) | cut -d : -f 6)"/.ssh/authorized_keys ]; then
+    renew_ssh_keys
+fi

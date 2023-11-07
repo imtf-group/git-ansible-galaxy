@@ -1,0 +1,2 @@
+---
+- include: "{{ distribution_dict[ansible_os_family] }}.yml"
