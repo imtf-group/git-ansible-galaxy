@@ -1,0 +1,19 @@
+---
+- name: get time configuration
+  command: timedatectl status
+  changed_when: false
+  register: time_conf
+  
+- name: "set timezone as {{ timezone }}"
+  command: "timedatectl set-timezone {{ timezone }}"
+  when: "'Time zone: ' + timezone not in time_conf.stdout"
+
+- name: disable timesyncd
+  command: timedatectl set-ntp false
+  when: "'Network time on: no' not in time_conf.stdout and 'NTP enabled: no' not in time_conf.stdout"
+
+- name: install ntp
+  dnf:
+    name: ntp
+    state: present
+  when: ansible_distribution_major_version|int < 8

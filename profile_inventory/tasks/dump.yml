@@ -1,0 +1,13 @@
+---
+- name: expect remote exists
+  assert:
+    that: "'remote' in groups"
+
+- name: "Dump the current inventory into {{ ansible_inventory_sources[0] }} file"
+  template:
+    src: inventory.yaml.j2
+    dest: "{{ ansible_inventory_sources[0] }}"
+    mode: "0664"
+
+- name: display the inventory
+  command: "cat {{ ansible_inventory_sources[0] }}"

@@ -1,0 +1,19 @@
+---
+instance_type: t3a.medium
+image_name: imtf-ubuntu-bionic
+proxmox_action: create
+num_servers: "{{ server_opts|default([1])|count }}"
+other_volumes: []
+tag_schedule: on-demand
+tag_maintainer: Jean-Baptiste Langlois
+tag_needed_until: "{{ ansible_date_time.date }}"
+tag_environmenttype: TEST
+proxmox_connection_port: 22
+server_opts:
+  - type: "{{ instance_type }}"
+instance_tags:
+  Deployment_date: "{{ ansible_date_time.date }}"
+  Schedule: "{{ tag_schedule }}"
+  Maintainer: "{{ tag_maintainer }}"
+  Needed_until: "{{ tag_needed_until }}"
+  EnvironmentType: "{{ tag_environmenttype }}"

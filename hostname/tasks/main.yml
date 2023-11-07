@@ -1,0 +1,9 @@
+---
+- name: check that hostname variable is defined
+  assert:
+    that:
+      - hostname is defined
+      - ansible_os_family is defined
+      - ansible_os_family in ('Debian', 'RedHat', 'Windows')
+
+- include: "{{ ansible_os_family }}.yml"

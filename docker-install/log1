@@ -1,0 +1,29 @@
+server_list:
+  kafka_servers:
+  - 0
+  karaf_servers:
+  - dms_artifact: karaf-admin
+    dms_service_id: karaf-admin
+    id: 0
+  neo4j_servers:
+  - 0
+  sironaml:
+  - sironaml
+  solr_servers:
+  - 0
+server_opts:
+- id: sironaml
+  image_name: imtf-sironaml-template-ceb
+  root_volume_size: 100
+  type: t3a.xlarge
+- id: 0
+  type: t3a.xlarge
+server_vars:
+  backup_dir: /home/ubuntu/backup
+  install_dir: /home/ubuntu/imtf
+  jdk_version: 17
+  package_dir: /home/ubuntu/install
+  tag_customer: IMTF
+  tag_description: Test environment for CCM
+  tag_product: CCM
+  tag_responsible: Bogdan Pogacean

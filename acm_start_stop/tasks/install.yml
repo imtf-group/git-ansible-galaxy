@@ -1,0 +1,23 @@
+---
+- block:
+    - name: Check if dms.sh exists
+      stat:
+        path: "{{ install_dir }}/apps/bin/dms.sh"
+      register: st_dms_file
+
+    - name: Copy systemd unit file
+      template:
+        src: acm.service.j2
+        dest: /lib/systemd/system/acm.service
+        mode: "0644"
+      become: true
+      when: st_dms_file.stat.exists
+
+    - name: Register acm in systemd
+      systemd:
+        name: acm
+        enabled: true
+        daemon_reload: true
+      become: true
+      when: st_dms_file.stat.exists
+  when: can_sudo is success

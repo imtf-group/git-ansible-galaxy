@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# return values:
+# 0   no changes
+# 255 changed
+
+RC=0
+
+{% for group in group_dict %}
+{% if group.name not in ansible_local.groups.keys()|list %}
+if groupadd -g {{ group.gid }} {{ group.name }}; then
+    echo "group {{ group.name }} created"
+    RC=255
+fi
+{% endif %}
+{% endfor %}
+
+{% for user in user_dict %}
+{% if user.name not in ansible_local.users.keys()|list %}
+if useradd -u {{ user.uid }} -m -G users -N -s /bin/bash -c "{{ user.comment }}" {{ user.name }}; then
+    echo "user {{ user.name }} created"
+fi
+{% endif %}
+{% for group in user.groups|d(['employees']) + ['docker'] %}
+{% if group in ansible_local.groups.keys()|list or group in group_dict|map(attribute='name')|list %}
+{% if user.name not in ansible_local.users.keys()|list or (user.name in ansible_local.users and group not in ansible_local.users[user.name].groups) %}
+if usermod -G {{ group }} -a {{ user.name }}; then
+    echo "user {{ user.name }} added to group {{ group }}"
+    RC=255
+fi
+{% endif %}
+{% endif %}
+{% endfor %}
+{% if user.name in ansible_local.users and user.name in ansible_local.users[user.name].groups %}
+usermod -g 100 {{ user.name }}
+if groupdel {{ user.name }} 2> /dev/null; then
+    echo "user {{ user.name }} groups updated"
+    RC=255
+fi
+{% endif %}
+{% for ssh_key in user.ssh_key %}
+{% if user.name not in ansible_local.users.keys()|list or (user.name in ansible_local.users and ssh_key not in ansible_local.users[user.name].ssh_key) %}
+USERDIR=$(grep ^{{ user.name }} /etc/passwd | cut -d: -f6)
+if [ ! -d "$USERDIR/.ssh" ]; then
+    mkdir -p -m 700 $USERDIR/.ssh
+fi
+chown {{ user.name }}:users $USERDIR/.ssh
+if [ ! -f "$USERDIR/.ssh/authorized_keys" ]; then
+    touch "$USERDIR/.ssh/authorized_keys"
+fi
+echo "{{ ssh_key }}" >> "$USERDIR/.ssh/authorized_keys"
+chmod 600 "$USERDIR/.ssh/authorized_keys"
+chown {{ user.name }}:users "$USERDIR/.ssh/authorized_keys"
+echo "user {{ user.name }} keys updated"
+RC=255
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{% for user in ansible_local.users.keys()|list|difference(user_dict|map(attribute='name')|list) %}
+if userdel -r -f {{ user }}; then
+    echo "user {{ user }} removed"
+    RC=255
+fi
+{% endfor %}
+
+exit $RC

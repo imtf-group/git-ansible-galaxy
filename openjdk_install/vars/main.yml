@@ -1,0 +1,9 @@
+---
+jdk_architecture_dict:
+  x86_64: x64
+  aarch64: aarch64
+
+distribution_dict:
+  Debian: Linux
+  RedHat: Linux
+  Windows: Windows

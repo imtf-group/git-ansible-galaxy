@@ -1,0 +1,50 @@
+---
+- name: add MySQL sources list
+  template:
+    src: mysql.list.j2
+    dest: /etc/apt/sources.list.d/mysql.list
+    mode: "0644"
+
+- name: install MySQL
+  apt:
+    state: present
+    update_cache: true
+    allow_unauthenticated: true
+    name:
+      - mysql-server
+      - python3-mysqldb
+      - python3-mysql.connector
+      - iputils-ping
+  register: db_pkg
+  until: db_pkg is success
+  retries: 10
+  delay: 15
+
+- name: Stop MySQL before configuration
+  service:
+    name: mysql
+    state: stopped
+  when: db_pkg is changed
+
+- name: Unload AppArmor profiles
+  command: /etc/init.d/apparmor teardown
+  when: db_pkg is changed
+
+- name: Install global config file
+  copy:
+    content: |
+      !includedir /etc/mysql/conf.d
+    dest: /etc/mysql/my.cnf
+  notify: restart db
+
+- name: Install network config file
+  template:
+    src: server.cnf.j2
+    dest: /etc/mysql/conf.d/server.cnf
+  notify: restart db
+
+- name: Install Debian maintenance file
+  template:
+    src: debian.cnf.j2
+    dest: /etc/mysql/debian.cnf
+  notify: restart db

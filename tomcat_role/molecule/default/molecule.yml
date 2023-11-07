@@ -1,0 +1,36 @@
+---
+
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  yamllint .
+  ansible-lint .
+
+platforms:
+  - name: tomcat
+    groups:
+      - tomcat
+    image: ${DOCKER_IMAGE_BASE:-idealista/jdk:8u252-stretch-openjdk-headless}
+    privileged: false
+    command: '/lib/systemd/systemd'
+    capabilities:
+      - SYS_ADMIN
+    volumes:
+      - '/sys/fs/cgroup:/sys/fs/cgroup:ro'
+    tmpfs:
+      - '/run'
+      - '/run/lock'
+      - '/tmp'
+
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      tomcat:
+        tomcat_version: ${TOMCAT_VERSION:-9.0.35}
+        ansible_python_interpreter: /usr/bin/python3
+verifier:
+  name: ansible
+  directory: ./tests

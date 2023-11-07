@@ -1,0 +1,18 @@
+---
+- block:
+    - name: check if eis is registered
+      service_facts:
+
+    - name: Deregister eis at startup
+      systemd:
+        name: eis
+        enabled: false
+      become: true
+      when: "'eis.service' in ansible_facts.services"
+
+    - name: Delete eis systemd scripts
+      file:
+        path: /lib/systemd/system/eis.service
+        state: absent
+      become: true
+  when: can_sudo is success

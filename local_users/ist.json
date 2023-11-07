@@ -1,0 +1,17 @@
+{
+    "apiVersion": "v1",
+    "kind": "Namespace",
+    "metadata": {
+        "creationTimestamp": "2022-04-12T12:50:08Z",
+        "deletionTimestamp": "2022-04-13T07:48:40Z",
+        "name": "istio-system",
+        "resourceVersion": "137524184",
+        "uid": "744ff413-9aae-4c94-adc8-3a1782f507f5"
+    },
+    "spec": {
+        "finalizers": []
+    },
+    "status": {
+        "phase": "Terminating"
+    }
+}

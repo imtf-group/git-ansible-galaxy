@@ -1,0 +1,22 @@
+---
+- block:
+    - name: Check if startup.sh exists
+      stat:
+        path: "{{ hs5_install_dir }}/bin/startup.sh"
+      register: st_dms_file
+      failed_when: not st_dms_file.stat.exists
+
+    - name: Copy systemd unit file
+      template:
+        src: hs5.service.j2
+        dest: /lib/systemd/system/hs5.service
+        mode: "0644"
+      become: true
+
+    - name: Register hs5 in systemd
+      systemd:
+        name: hs5
+        enabled: true
+        daemon_reload: true
+      become: true
+  when: can_sudo is success

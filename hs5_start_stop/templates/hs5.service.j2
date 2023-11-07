@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+#
+
+[Unit]
+Description=HyperSuite/5
+After=network.target
+
+[Service]
+Type=forking
+User={{ install_user|d(ansible_env.SUDO_USER|d(ansible_user_id)) }}
+ExecStart={{ hs5_install_dir }}/bin/startup.sh
+ExecStop={{ hs5_install_dir }}/bin/shutdown.sh
+Environment=JAVA_HOME={{ java_home }}
+TimeoutSec=180
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

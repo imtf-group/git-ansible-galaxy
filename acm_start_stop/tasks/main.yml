@@ -1,0 +1,9 @@
+---
+- name: check is current user has sudo rights
+  command: /bin/true
+  become: true
+  changed_when: false
+  ignore_errors: true
+  register: can_sudo
+
+- include_tasks: "{{ acm_service_action }}.yml"

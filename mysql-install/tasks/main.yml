@@ -1,0 +1,137 @@
+---
+- include_tasks: "{{ mysql_engine }}-{{ ansible_os_family }}.yml"
+
+- name: create MariaDB directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+    owner: mysql
+    group: mysql
+  loop:
+    - "{{ mysql_install_dir }}"
+    - "{{ mysql_data_dir }}"
+    - "{{ mysql_log_dir }}"
+
+# - name: Stop and disable AppArmor
+#   service:
+#     name: apparmor
+#     state: stopped
+#     enabled: false
+#   register: apparmor_serv
+
+# - name: Unload AppArmor profiles
+#   command: /etc/init.d/apparmor teardown
+#   when: apparmor_serv is changed
+
+- name: copy unit file
+  template:
+    src: mysql.service.j2
+    dest: "/lib/systemd/system/{{ mysql_engine }}.service"
+
+- name: check if db is initialized
+  stat:
+    path: "{{ mysql_data_dir }}/mysql"
+  register: st_mysql_dir
+
+- name: initialize database (deprecated)
+  command: mysql_install_db
+  failed_when: false
+  register: init_db
+  when: not st_mysql_dir.stat.exists
+
+- name: initialize database
+  command: mysqld --initialize-insecure
+  when: not st_mysql_dir.stat.exists and init_db.rc != 0
+
+- name: "restart {{ mysql_engine }}"
+  systemd:
+    name: "{{ mysql_engine }}"
+    state: restarted
+    daemon_reload: true
+  when: not st_mysql_dir.stat.exists  
+
+- name: Ensure service is started
+  systemd:
+    name: "{{ mysql_engine }}"
+    state: started
+    enabled: true
+
+- name: Check if root password is set
+  command: mysqladmin -uroot status
+  changed_when: false
+  failed_when: false
+  register: root_pwd_check
+
+- name: Set MariaDB root password for the first time (root@localhost)
+  mysql_user:
+    name: root
+    password: "{{ mysql_root_password }}"
+    host: localhost
+    state: present
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+  no_log: true
+  when: root_pwd_check.rc == 0
+
+- name: "Set MariaDB root password for 127.0.0.1, ::1, {{ inventory_hostname }}"
+  mysql_user:
+    name: root
+    password: "{{ mysql_root_password }}"
+    host: "{{ item }}"
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+    state: present
+  no_log: true
+  loop:
+    - ::1
+    - 127.0.0.1
+    - "{{ inventory_hostname }}"
+  when: root_pwd_check.rc == 0
+
+- name: Remove the test database
+  mysql_db:
+    name: test
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+    state: absent
+  no_log: true
+
+- name: Create user defined databases
+  mysql_db:
+    name: "{{ item }}"
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+    state: present
+  no_log: true
+  loop: "{{ db_users|map(attribute='databases')|flatten|list }}"
+
+- name: Create the users (localhost)
+  mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    host: localhost
+    priv: "{{ item.databases|map('regex_replace', '$', '.*:ALL')|list|join('/') }}"
+    append_privs: false
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+    state: present
+  no_log: true
+  loop: "{{ db_users }}"
+
+- name: Create the users (remote)
+  mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    host: '%'
+    priv: "{{ item.databases|map('regex_replace', '$', '.*:ALL')|list|join('/') }}"
+    append_privs: false
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_install_dir }}/mysqld.sock"
+    state: present
+  no_log: true
+  loop: "{{ db_users }}"

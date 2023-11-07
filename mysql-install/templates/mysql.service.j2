@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+# {{ mysql_engine }} systemd service file
+
+[Unit]
+Description={{ mysql_engine }} {{ mysql_version }} Server
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+{% if mysql_engine != 'mysql' %}
+Alias=mysql.service
+{% endif %}
+Alias=mysqld.service
+
+[Service]
+User=mysql
+Group=mysql
+{% if mysql_engine == 'mysql' %}
+Type=forking
+ExecStart=/usr/sbin/mysqld --daemonize --pid-file=/var/run/mysqld/mysqld.pid
+{% else %}
+Type=notify
+ExecStart=/usr/sbin/mysqld --pid-file=/var/run/mysqld/mysqld.pid
+{% endif %}
+PermissionsStartOnly=true
+PIDFile=/var/run/mysqld/mysqld.pid
+TimeoutSec=600
+LimitNOFILE=16364
+Restart=on-failure
+RestartPreventExitStatus=1
+RuntimeDirectory=mysqld
+RuntimeDirectoryMode=755
+KillSignal=SIGTERM
+SendSIGKILL=no
+UMask=007

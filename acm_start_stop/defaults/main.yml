@@ -1,0 +1,9 @@
+---
+install_dir: /opt/imtf
+acm_service_action: install
+acm_start_conditions: []
+
+# acm_start_conditions:
+#   - port:
+#     host:
+ 

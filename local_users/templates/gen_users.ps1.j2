@@ -1,0 +1,107 @@
+# return values:
+# 0   no changes
+# 255 changed
+
+$RC = 0
+$sshKeyFile = "C:\ProgramData\ssh\administrators_authorized_keys"
+
+if (Get-Module -ListAvailable -Name "SQLPS") {
+    Import-Module "SQLPS"
+    try {
+        $sqlServer = New-Object ('Microsoft.SqlServer.Management.Smo.Server') $env:ComputerName
+        $sqlServer.Logins | Out-Null
+        $currentSqlUsers = $sqlserver.logins | where {$_.LoginType -eq "WindowsUser" -and $_.Name -notlike "NT *" -and $_.Name -notlike "*Administrator*"}
+        for ($i = 0; $i -lt $currentSqlUsers.Count; $i++) {
+            if (!$currentSqlUsers[$i].Name.StartsWith($env:ComputerName.toupper())) {
+                Write-Host "Deleting {0}" -f $currentSqlUsers[$i].Name
+                $sqlServer.Logins[$currentSqlUsers[$i].Name].Drop()
+                $RC = 255
+            }
+        }
+
+    } catch {
+        $sqlServer = $Null
+    }
+} else {
+    $sqlServer = $Null
+}
+
+{% for user in user_dict %}
+{% if user.name not in ansible_users %}
+$md5 = New-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
+$utf8 = New-Object -TypeName System.Text.UTF8Encoding
+$PlainPassword = "A1%" + [System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes("{{ user.name }}"))).Replace('-', '').ToLower()
+$SecurePassword = ConvertTo-SecureString "$PlainPassword" -AsPlainText -Force
+$isCreated = New-LocalUser -Name "{{ user.name }}" -Password $SecurePassword -FullName "{{ user.comment }}" -AccountNeverExpires
+if ($isCreated) {
+    Set-LocalUser -Name "{{ user.name }}" -PasswordNeverExpires $true
+    Write-Host "{{ user.name }} created"
+    $RC = 255
+}
+{% endif %}
+$isAdmin = Get-LocalGroupMember -Group Administrators | Select-String -Pattern "{{ user.name }}" -Quiet
+if (!$isAdmin) {
+    Add-LocalGroupMember -Group Administrators -Member "{{ user.name }}"
+    Write-Host "user {{ user.name }} added to group Administrators"
+    $RC = 255
+}
+$isUser = Get-LocalGroupMember -Group Users | Select-String -Pattern "{{ user.name }}" -Quiet
+if (!$isUser) {
+    Add-LocalGroupMember -Group Users -Member "{{ user.name }}"
+    Write-Host "user {{ user.name }} added to group Users"
+    $RC = 255
+}
+
+# TODO : Deal with groups
+{% if user.ssh_key is defined %}
+{% for ssh_key in user.ssh_key %}
+$hasKey = Select-String -Path "$sshKeyFile" -Pattern "# {{ user.name }}" -Quiet
+if (!$hasKey) {
+    Add-Content -Path "$sshKeyFile" -Value "{{ ssh_key }} # {{ user.name }}"
+    Write-Host "user {{ user.name }} keys updated"
+    $RC = 255
+}
+{% endfor %}
+{% endif %}
+{% if user.name not in ansible_sqlusers %}
+if ($sqlServer) {
+    $userWithHostname = $env:ComputerName + "\{{ user.name }}"
+    $sqlLogin = [Microsoft.SqlServer.Management.Smo.Login]::New($sqlServer, $userWithHostname)
+    $sqlLogin.LoginType  = [Microsoft.SqlServer.Management.Smo.LoginType]::WindowsUser
+    $sqlLogin.Create()
+    $svrole = $sqlServer.Roles | where {$_.Name -eq 'sysadmin'}
+    $svrole.AddMember($userWithHostname)
+    Write-Host "user {{ user.name }} added to SQLServer"
+    $RC = 255
+}
+{% endif %}
+{% endfor %}
+
+{% if ansible_sqlusers is not string %}
+{% for user in ansible_sqlusers|difference(user_dict|map(attribute='name')|list) %}
+{% if user != 'Administrator' %}
+if ($sqlServer) {
+    $userWithHostname = $env:ComputerName + "\{{ user }}"
+    if ($sqlServer.Logins.Contains($userWithHostname)) {
+        $sqlServer.Logins[$userWithHostname].Drop()
+        Write-Host "user {{ user }} removed from SQLServer"
+        $RC = 255
+    }
+}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if ansible_users is not string %}
+{% for user in ansible_users|difference(user_dict|map(attribute='name')|list) %}
+$isUser = Get-LocalGroupMember -Group Users | Select-String -Pattern "{{ user }}" -Quiet
+if ($isUser) {
+    Remove-LocalUser -Name "{{ user }}"
+    $content = Select-String -Pattern "# {{ user }}" -Path "$sshKeyFile" -NotMatch | foreach {$_.Line}
+    $content -replace "`r`n","`n" | Set-Content -Path "$sshKeyFile"
+    Write-Host "user {{ user }} removed"
+    $RC = 255
+}
+{% endfor %}
+{% endif %}
+$host.SetShouldExit($RC)

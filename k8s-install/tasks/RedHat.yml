@@ -1,0 +1,18 @@
+---
+- name: Add a signing key for Kubernetes repo
+  rpm_key:
+    key: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    state: present
+
+- name: Add Kubernetes repository
+  yum_repository:
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    description: Kubernetes
+    state: present
+    name: kubernetes
+    mode: "0644"
+
+- name: Install kubernetes
+  dnf:
+    name: "{{ k8s_packages }}"
+    state: present

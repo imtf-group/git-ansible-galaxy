@@ -1,0 +1,9 @@
+---
+ad_gitlab_token: no-token
+ad_gitlab_api: https://gitlab.imtf-devops.com/api/v4
+ad_search_base: DC=IMTF,DC=LOCAL
+ad_uri: ldap://server
+ad_search_filter: '(memberof:1.2.840.113556.1.4.1941:=CN=GITLAB_USERS_AWS,OU=Gitlab,OU=Security_Groups,OU=IMTF,DC=IMTF,DC=LOCAL)'
+ad_bind_dn: Administrator
+ad_bind_password: password
+ad_domain_name: IMTF.COM

@@ -1,0 +1,91 @@
+---
+- name: check that fqdn is correctly defined
+  assert:
+    that: fqdn is defined
+
+- name: "create {{ nginx_dir }} directory"
+  file:
+    path: "{{ nginx_dir }}/{{ item }}"
+    state: directory
+    recurse: true
+  loop:
+    - etc
+    - nginx
+
+- name: Apply configuration
+  copy:
+    src: "{{ item.name }}"
+    dest: "{{ nginx_dir }}/etc/{{ item.name }}"
+    mode: "0644"
+  loop:
+    - name: mime.types
+    - name: nginx.conf
+
+- name: create ssl directory
+  file:
+    path: "{{ nginx_dir }}/etc/{{ item }}"
+    state: directory
+  loop:
+    - ssl
+    - conf.d
+
+- name: add ssl options
+  copy:
+    src: options-ssl-nginx.conf
+    dest: "{{ nginx_dir }}/etc/ssl"
+    mode: "0644"
+
+- name: redirect http to https
+  blockinfile:
+    path: "{{ nginx_dir }}/etc/conf.d/redirect_to_https.conf"
+    block: |
+      server {
+        listen 80;
+        server_name {{ fqdn }};
+        location / {
+            return 301 https://$host$request_uri;
+        }    
+      }
+    marker: "# {mark} REDIRECT HTTPS FOR {{ fqdn }}"
+    create: true
+    state: present
+    mode: '0644'
+  notify: restart nginx
+
+- name: set local configuration
+  template:
+    src: default.conf.j2
+    dest: "{{ nginx_dir }}/etc/conf.d/{{ item.name|default('default') }}.conf"
+    mode: '0644'
+  loop: "{{ nginx_conf }}"
+  notify: restart nginx
+
+- name: create local path directories
+  file:
+    path: "{{ item.1.dest }}"
+    state: directory
+    recurse: true
+    mode: '0755'
+  when: item.1.type|d('port') == 'volume'
+  loop: "{{ query('subelements', nginx_conf, 'mappings') }}"
+
+- name: enable start at boot
+  template:
+    src: nginx.service.j2
+    dest: /etc/systemd/system/nginx.service
+    mode: '0644'
+  notify: restart nginx
+
+- name: Copy restart script
+  copy:
+    src: restart.sh
+    dest: "{{ nginx_dir }}/restart.sh"
+    mode: "0755"
+
+- name: Crontab creation
+  cron:
+    name: restart server everyday
+    minute: "25"
+    hour: "23"
+    job: "{{ nginx_dir }}/restart.sh > /dev/null"
+    state: present

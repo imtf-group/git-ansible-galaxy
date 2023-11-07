@@ -1,0 +1,6 @@
+---
+periodical_updates_list_freq: 1
+periodical_updates_download_freq: 1
+periodical_updates_critical_freq: 1
+periodical_updates_autoclean_freq: 21
+periodical_updates_enabled: true

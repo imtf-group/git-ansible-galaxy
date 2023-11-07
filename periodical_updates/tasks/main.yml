@@ -1,0 +1,61 @@
+---
+- block:
+    - name: install needed packages
+      apt:
+        name:
+          - unattended-upgrades
+          - apt-listchanges
+        update_cache: true
+        state: present
+
+    - name: delete invalid periodical update file
+      file:
+        path: "/etc/apt/apt.conf.d/{{ item }}"
+        state: absent
+      loop:
+        - 99periodic-updates
+        - 90periodic-updates
+
+    - name: create periodical update file
+      template:
+        src: "{{ item }}.j2"
+        dest: "/etc/apt/apt.conf.d/{{ item }}"
+        mode: "0644"
+      loop:
+        - 02periodic
+        - 20auto-upgrades
+
+    - name: create apt-daily.timer conf directory
+      file:
+        path: /etc/systemd/system/apt-daily.timer.d
+        state: directory
+        mode: "0755"
+      when: periodical_updates_enabled|bool
+
+    - name: override apt-daily configuration
+      copy:
+        src: apt-daily-timer.conf
+        dest: /etc/systemd/system/apt-daily.timer.d/override.conf
+        mode: "0644"
+      when: periodical_updates_enabled|bool
+
+    - name: enable apt-daily
+      systemd:
+        name: "{{ item }}.timer"
+        state: started
+        enabled: true
+      when: periodical_updates_enabled|bool
+      loop:
+        - apt-daily
+        - apt-daily-upgrade
+
+    - name: get lock dir
+      command: apt-config shell StateDir Dir::State/d
+      changed_when: false
+      register: lock_dir
+      when: not periodical_updates_enabled|bool
+
+    - name: update sources
+      command: "flock {{ lock_dir.stdout.split(\"'\")[1] }}/first_lock apt-get update"
+      when: not periodical_updates_enabled|bool 
+  when: ansible_os_family == 'Debian'

@@ -1,0 +1,21 @@
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+
+WorkingDirectory={{ tomcat_install_path }}
+
+ExecStart={{ tomcat_bin_path }}/startup.sh
+ExecStop={{ tomcat_bin_path }}/shutdown.sh
+
+User={{ tomcat_user }}
+Group={{ tomcat_group }}
+LimitMEMLOCK={{ tomcat_memlock_limit }}
+LimitNOFILE={{ tomcat_nofile_limit }}
+LimitAS={{ tomcat_as_limit }}
+LimitNPROC={{ tomcat_nproc_limit }}
+
+[Install]
+WantedBy=multi-user.target

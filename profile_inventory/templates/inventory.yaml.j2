@@ -1,0 +1,39 @@
+---
+all:
+  children:
+    localhost:
+      hosts:
+        localhost:
+          ansible_connection: local
+    remote:
+      children:
+{% if server_mapping is defined %}
+{% for usage in server_mapping|map(attribute='usage')|list|unique %}
+        {{ usage }}:
+          hosts:
+{% for serv in server_mapping %}
+{% if serv.usage == usage %}
+{% for host in groups.remote|default([]) %}
+{% if 'tag_index' not in hostvars[host] or ('tag_index' in hostvars[host] and hostvars[host].tag_index|string == serv.id|string) %}
+            {{ host }}:
+{% for key, value in serv.items() %}{% if key not in ('id', 'usage') %}
+              {{ key }}: {{ value }}
+{% endif %}{% endfor %}
+{% for field in ('ansible_host', 'ansible_shell_type', 'tag_index') %}{% if field in hostvars[host] %}
+              {{ field }}: {{ hostvars[host][field] }}
+{% endif %}{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if server_vars is defined %}
+      vars:
+        ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+{% if server_vars is defined and server_vars is not none %}
+{% for key, value in server_vars.items() %}
+        {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% endif %}

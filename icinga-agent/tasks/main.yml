@@ -1,0 +1,2 @@
+---
+- include_tasks: "{{ icinga_action }}.yml"

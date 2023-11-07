@@ -1,0 +1,114 @@
+---
+- name: "add ubuntu to technical group"
+  user:
+    name: ubuntu
+    groups:
+      - technical
+    append: true
+    state: present
+
+- name: install prerequisites
+  apt:
+    name:
+      - libpam-sss
+      - libnss-sss
+      - sssd
+      - sssd-tools
+      - sssd-ldap
+      - ldap-utils
+    update_cache: true
+    state: present
+  register: apt_action
+  retries: 100
+  until: >
+    apt_action is success or
+    ('Failed to lock apt for exclusive operation' not in apt_action.msg
+    and 'Failed to update apt cache' not in apt_action.msg
+    and 'Could not get lock' not in apt_action.msg
+    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+- name: copy SSSd configuration
+  template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    mode: "0600"
+  notify: restart sssd
+
+- name: copy NSSwitch configuration
+  copy:
+    src: nsswitch.conf
+    dest: /etc/nsswitch.conf
+    mode: "0644"
+  notify: restart systemd-logind
+
+- name: give access to docker group
+  lineinfile:
+    line: '*;*;*;Al0000-2400;docker'
+    path: /etc/security/group.conf
+    state: present
+
+- name: update SSH configuration
+  copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    mode: "0644"
+  notify: restart ssh
+
+- name: add an helper to retrieve ssh keys
+  template:
+    src: public_ssh_key.sh.j2
+    dest: /etc/profile.d/public_ssh_key.sh
+    mode: "0644"
+
+- name: create technical group
+  group:
+    name: technical
+    gid: 5202
+    state: present
+
+- name: enable login access via access.conf
+  lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: "# account  required     pam_access.so"
+    line: "account  required     pam_access.so"
+    state: present
+
+- name: update access.conf
+  template:
+    src: access.conf.j2
+    dest: /etc/security/access.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: install template for PAM
+  copy:
+    src: groups
+    dest: /usr/share/pam-configs/groups
+    mode: "0644"
+
+- name: check PAM configuration
+  command: cat /var/lib/pam/seen
+  changed_when: false
+  register: pam_conf
+
+- name: update pam
+  command: pam-auth-update --enable mkhomedir --enable groups
+  when:
+    - "'stdout' in pam_conf"
+    - "'groups' not in pam_conf.stdout"
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    LC_ALL: C.UTF-8
+
+- name: add sudoers configuration
+  template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/users
+    mode: "0644"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: delete old sudoers configuration
+  file:
+    path: /etc/sudoers.d/90-cloud-init-users
+    state: absent

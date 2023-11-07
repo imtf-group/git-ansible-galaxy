@@ -1,0 +1,25 @@
+---
+- name: Download OpenJDK
+  win_get_url:
+    url: "https://api.adoptium.net/v3/binary/version/{{ jdk_version }}/windows/{{ jdk_architecture_dict[ansible_architecture] }}/jdk/hotspot/normal/eclipse?project=jdk"
+    dest: "%TEMP%\\openjdk-{{ jdk_version | regex_replace('^jdk-?(?P<version>[0-9]+).*$', '\\g<version>') }}.tar.gz"
+
+- name: "Create C:\\IMTF\\Java directory"
+  win_file:
+    path: C:\IMTF\Java
+    state: directory
+
+- name: Download and uncompress OpenJDK package in C:\IMTF\Java
+  win_unzip:
+    src: "%TEMP%\\openjdk-{{ jdk_version | regex_replace('^jdk-?(?P<version>[0-9]+).*$', '\\g<version>') }}.tar.gz"
+    dest: C:\IMTF\Java
+
+- name: Delete OpenJDK package
+  win_file:
+    path: "%TEMP%\\openjdk-{{ jdk_version | regex_replace('^jdk-?(?P<version>[0-9]+).*$', '\\g<version>') }}.tar.gz"
+    state: absent
+
+- name: update PATH variable
+  win_path:
+    elements: C:\IMTF\Java\bin
+    state: present

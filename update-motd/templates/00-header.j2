@@ -1,0 +1,51 @@
+#!/bin/bash
+
+CUR_DIR={{ install_dir }}/apps/bin
+LIGHTBLUE="\033[1;34m"
+YELLOW="\033[0;33m"
+NC='\033[0m'
+
+function showHeader() {
+  MSG=$1
+  drawLine 80
+  printf "${LIGHTBLUE}$MSG${NC}\n"
+  drawLine 80
+}
+
+function drawLine() {
+  LENGTH=$1
+  for i in $(seq 1 $LENGTH); do echo -n "="; done; echo 
+}
+
+function showEnv() {
+  MSG=$1
+  RES=$2
+  printf "${YELLOW}%-.30s${NC}" "${MSG}"
+  echo ": ${RES}"
+}
+
+for source_file in \
+    "$CUR_DIR/env/profile.sh" \
+    "$CUR_DIR/env/env-common.sh" \
+    "$CUR_DIR/env/env.sh" \
+    "$CUR_DIR/env/infra-config.sh" \
+    "$CUR_DIR/env/default-config.sh"; do
+  if [ -r "$source_file" ]; then
+    source "$source_file"
+  fi
+done
+
+showHeader "Welcome to $(uname -n)"
+showEnv "DMS_VERSION" "$DMS_VERSION"
+showEnv "PROFILE_NAME" "$PROFILE_NAME"
+showEnv "PROFILE_VERSION" "$PROFILE_VERSION"
+if [ -n "$ENVIRONMENT" ]; then
+  showEnv "ENVIRONMENT" "$ENVIRONMENT"
+fi
+if [ -n "$BASE_INSTALL_DIR" ]; then
+  showEnv "BASE_INSTALL_DIR" "$BASE_INSTALL_DIR"
+fi
+if [ -x "$BASE_INSTALL_DIR/apps" ]; then
+  showEnv "ARTIFACTS" "$(ls -1 $BASE_INSTALL_DIR/apps/ | grep -vw bin | tr '\n' ' ')"
+fi
+drawLine 80

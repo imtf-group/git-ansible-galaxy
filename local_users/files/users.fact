@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import grp
+import os
+import pwd
+import json
+
+user_group = 'users'
+
+if user_group not in [g.gr_name for g in grp.getgrall()]:
+    retlst = []
+else:
+    retlst = grp.getgrnam(user_group).gr_mem
+
+users = {}
+for user in retlst:
+    users[user] = {}
+    users[user] = dict(
+        uid=pwd.getpwnam(user).pw_uid,
+        comment=pwd.getpwnam(user).pw_gecos,
+        groups=[i.gr_name for i in grp.getgrall() if user in i.gr_mem],
+        ssh_key=list(map(
+            lambda x: x.replace('\n', ''),
+            open(
+                os.path.join(
+                    pwd.getpwnam(user).pw_dir,
+                    '.ssh',
+                    'authorized_keys')).readlines())))
+
+print(json.dumps(users, indent=4))

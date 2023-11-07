@@ -1,0 +1,19 @@
+// {{ ansible_managed }}
+
+// Enable the update/upgrade script (0=disable)
+APT::Periodic::Enable "{% if not periodical_updates_enabled|bool %}0{% else %}1{% endif %}";
+
+// Do "apt-get update" automatically every n-days (0=disable)
+APT::Periodic::Update-Package-Lists "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_list_freq }}{% endif %}";
+
+// Do "apt-get upgrade --download-only" every n-days (0=disable)
+APT::Periodic::Download-Upgradeable-Packages "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_download_freq }}{% endif %}";
+
+// Run the "unattended-upgrade" security upgrade script
+// every n-days (0=disable)
+// Requires the package "unattended-upgrades" and will write
+// a log in /var/log/unattended-upgrades
+APT::Periodic::Unattended-Upgrade "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_critical_freq }}{% endif %}";
+
+// Do "apt-get autoclean" every n-days (0=disable)
+APT::Periodic::AutocleanInterval "{% if not periodical_updates_enabled|bool %}0{% else %}{{ periodical_updates_autoclean_freq }}{% endif %}";

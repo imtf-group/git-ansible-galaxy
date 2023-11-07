@@ -1,0 +1,91 @@
+---
+- name: "add ec2-user to technical group"
+  user:
+    name: ec2-user
+    groups:
+      - technical
+    append: true
+    state: present
+
+- name: install prerequisites
+  dnf:
+    name:
+      - sssd
+      - sssd-tools
+      - openldap-clients
+      - sssd-ldap
+      - oddjob-mkhomedir
+    update_cache: true
+    state: present
+
+- name: copy SSSd configuration
+  template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    mode: "0600"
+  notify:
+    - execute authconfig
+    - restart sssd
+    - restart oddjobd
+
+- name: create technical group
+  group:
+    name: technical
+    gid: 5202
+    state: present
+
+- name: update access.conf
+  template:
+    src: access.conf.j2
+    dest: /etc/security/access.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+- meta: flush_handlers
+
+- name: copy NSSwitch configuration
+  copy:
+    src: nsswitch.conf
+    dest: /etc/nsswitch.conf
+    mode: "0644"
+  notify: restart systemd-logind
+
+- name: give access to docker group
+  lineinfile:
+    line: '*;*;*;Al0000-2400;docker'
+    path: /etc/security/group.conf
+    state: present
+
+- name: update PAM configuration for groups
+  lineinfile:
+    path: /etc/pam.d/password-auth
+    insertafter: "pam_env.so"
+    line: "auth optional pam_group.so use_first_pass"
+    state: present
+
+- name: update SSH configuration
+  copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    mode: "0644"
+  notify: restart ssh
+
+- name: add an helper to retrieve ssh keys
+  template:
+    src: public_ssh_key.sh.j2
+    dest: /etc/profile.d/public_ssh_key.sh
+    mode: "0644"
+
+- name: add sudoers configuration
+  template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/users
+    mode: "0644"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: delete old sudoers configuration
+  file:
+    path: /etc/sudoers.d/90-cloud-init-users
+    state: absent
+

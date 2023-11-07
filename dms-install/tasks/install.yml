@@ -1,0 +1,56 @@
+---
+- name: check that distribution_coordinates is defined
+  assert:
+    that: distribution_coordinates is defined
+
+- name: create temporary directory
+  tempfile:
+    state: directory
+  register: temp_dir
+
+- name: "import from maven {{ distribution_coordinates.split(':')[1] }}-{{ distribution_coordinates.split(':')|last }}.{{ distribution_coordinates.split(':')[2] }}"
+  maven_artifact:
+    group_id: "{{ distribution_coordinates.split(':')[0] }}"
+    artifact_id: "{{ distribution_coordinates.split(':')[1] }}"
+    repository_url: "https://{{ nexus_server }}/repository/{{ nexus_repository }}"
+    extension: "{{ distribution_coordinates.split(':')[2] }}"
+    version: "{{ distribution_coordinates.split(':')|last }}"
+    classifier: "{% if distribution_coordinates.split(':')|length == 5 %}{{ distribution_coordinates.split(':')[3] }}{% else %}{{ omit }}{% endif %}"
+    dest: "{{ temp_dir.path }}/{{ distribution_coordinates.split(':')[1] }}-{{ distribution_coordinates.split(':')|last }}.{{ distribution_coordinates.split(':')[2] }}"
+    state: present
+
+- name: Unarchive distribution package
+  unarchive:
+    src: "{{ temp_dir.path }}/{{ distribution_coordinates.split(':')[1] }}-{{ distribution_coordinates.split(':')|last }}.{{ distribution_coordinates.split(':')[2] }}"
+    dest: "{{ temp_dir.path }}"
+    remote_src: true
+    creates: "{{ temp_dir.path }}/env/common/env-common.sh"
+
+- name: Install DMS
+  shell: "{{ temp_dir.path }}/bash-install/install.sh {{ profile_environment }}"
+  args:
+    creates: "{{ install_dir }}/apps/bin/dms.sh"
+  environment:
+    BASE_INSTALL_DIR: "{{ install_dir }}"  
+    BACKUPS_ROOT_DIR: "{{ install_dir|dirname }}/backup"  
+    KARAF_START_ORDER: karaf-admin
+    KARAF_ADMIN_SERVER_NAME: karaf-admin
+    DMS_SERVICE_ID: karaf-admin
+
+- name: change install dir permanently
+  lineinfile:
+    path: "{{ install_dir }}/apps/bin/env/env-common.sh"
+    state: present
+    line: "export BASE_INSTALL_DIR={{ install_dir }}"
+    insertbefore: "BASE_INSTALL_DIR="
+
+- name: specify environment variable
+  lineinfile:
+    path: "{{ install_dir }}/apps/bin/env/env-common.sh"
+    state: present
+    line: "ENVIRONMENT={{ profile_environment }}"
+
+- name: "delete temporary directory {{ temp_dir.path }}"
+  file:
+    path: "{{ temp_dir.path }}"
+    state: absent

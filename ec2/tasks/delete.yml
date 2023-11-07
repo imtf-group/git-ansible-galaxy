@@ -1,0 +1,108 @@
+---
+- name: count instance
+  ec2_instance:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+    state: present
+  register: ec2_count
+  ignore_errors: true
+- name: disassociate an elastic IP
+  ec2_eip:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    region: "{{ aws_region }}"
+    device_id: "{{ item.instance_id }}"
+    ip: "{{ item.public_ip_address }}"
+    release_on_disassociation: true
+    state: absent
+  failed_when: false
+  when:
+    - ec2_count is not failed
+    - item.public_ip_address is defined
+  loop: "{{ ec2_count.instances|default([]) }}"
+- name: get dns records
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: get
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name_lower) }}-{{ item.tags['Index'] }}.imtf-devops.com"
+    type: A
+  when:
+    - ec2_count is not failed
+    - "'Index' in item.tags"
+  register: rec
+  loop: "{{ ec2_count.instances|default([]) }}"
+- name: delete server from dns server
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: absent
+    zone: imtf-devops.com
+    record: "{{ item.0.set.record }}"
+    ttl: "{{ item.0.set.ttl }}"
+    type: "{{ item.0.set.type }}"
+    value: "{{ item.0.set.value }}"
+    private_zone: "{{ item.1 }}"
+  failed_when: false
+  when:
+    - "'set' in item.0"
+    - item.0.set.record is defined
+  loop: "{{ rec.results|default([])|product([False, True])|list }}"
+- name: get public dns records
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: get
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name_lower) }}.imtf-devops.com"
+    type: A
+    private_zone: false
+  register: rec_public
+- name: get private dns records
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: get
+    zone: imtf-devops.com
+    record: "{{ dns_name|default(instance_name_lower) }}.imtf-devops.com"
+    type: A
+    private_zone: true
+  register: rec_private
+- name: delete server from private dns server
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: absent
+    zone: imtf-devops.com
+    record: "{{ rec_private.set.record }}"
+    ttl: "{{ rec_private.set.ttl }}"
+    type: "{{ rec_private.set.type }}"
+    value: "{{ rec_private.set.value }}"
+    private_zone: true
+  when: rec_private.set.record is defined
+- name: delete server from public dns server
+  route53:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    state: absent
+    zone: imtf-devops.com
+    record: "{{ rec_public.set.record }}"
+    ttl: "{{ rec_public.set.ttl }}"
+    type: "{{ rec_public.set.type }}"
+    value: "{{ rec_public.set.value }}"
+    private_zone: false
+  failed_when: false
+  when: rec_public.set.record is defined
+- name: instance delete
+  ec2_instance:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+    wait: false
+    state: absent

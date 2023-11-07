@@ -1,0 +1,7 @@
+---
+- name: restart db
+  systemd:
+    name: "{{ mysql_engine }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true

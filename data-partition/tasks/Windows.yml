@@ -1,0 +1,31 @@
+---
+# data_dir is "D:DATA" or "D"
+
+- name: Get partition list
+  win_shell: Get-Partition | Select -ExpandProperty DriveLetter
+  register: part_list_win
+  changed_when: false
+
+- name: Get disk list
+  win_shell: Get-Disk | Select -ExpandProperty Number
+  register: part_disk_win
+  changed_when: false
+
+- name: Prepare format script
+  win_copy:
+    content: |
+      select disk {{ part_disk_win.stdout_lines[-1] }}
+      create partition primary
+      assign letter={% if data_dir.split(':')|length > 1 %}{{ data_dir.split(':')[0] }}{% else %}{{ data_dir }}{% endif %}
+
+      format fs=ntfs label="{% if data_dir.split(':')|length > 1 %}{{ data_dir.split(':')[1] }}{% else %}UNTITLED{% endif %}" quick
+    dest: C:\Windows\Temp\diskpart.script
+  when: >
+    (data_dir.split(':')|length > 1 and data_dir.split(':')[0] not in part_list_win.stdout_lines) or 
+    (data_dir.split(':')|length == 1 and data_dir not in part_list_win.stdout_lines)
+
+- name: Execute DiskPart
+  win_command: diskpart /s C:\Windows\Temp\diskpart.script
+  when: >
+    (data_dir.split(':')|length > 1 and data_dir.split(':')[0] not in part_list_win.stdout_lines) or 
+    (data_dir.split(':')|length == 1 and data_dir not in part_list_win.stdout_lines)

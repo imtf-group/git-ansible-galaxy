@@ -1,0 +1,84 @@
+---
+- name: check if OS is supported
+  assert:
+    that: ansible_os_family in partition_pkg_dict
+
+- name: detect new disks
+  command: lsblk -d --exclude 7,1 -n -o NAME
+  changed_when: false
+  register: block_dev
+- name: get new disk name
+  set_fact:
+    new_disk_name: "{{ item }}"
+  when:
+    - new_disk_name is not defined
+    - item in ansible_devices
+    - "not ansible_devices[item].partitions and 'datavg-lv' + data_dir.split('/')[-1].replace('_', '').replace('-', '').replace('/', '') not in ansible_devices[item].holders"
+  loop: "{{ block_dev.stdout_lines }}"
+- block:
+    - name: install parted (Debian)
+      apt:
+        name: "{{ partition_pkg_dict['Debian'] }}"
+        state: present
+        update_cache: true
+      when: ansible_os_family == 'Debian'
+      register: apt_action
+      retries: 100
+      until: >
+        apt_action is success or
+        ('Failed to lock apt for exclusive operation' not in apt_action.msg
+        and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+
+    - name: install parted (RedHat)
+      apt:
+        name: "{{ partition_pkg_dict['RedHat'] }}"
+        state: present
+        update_cache: true
+      when: ansible_os_family == 'RedHat'
+
+    - name: "create new partition /dev/{{ new_disk_name }}{% if 'nvm' in new_disk_name %}p1{% else %}1{% endif %}"
+      partition:
+        device: "/dev/{{ new_disk_name }}"
+        path: "/dev/{{ new_disk_name }}{% if 'nvm' in new_disk_name %}p1{% else %}1{% endif %}"
+        flags: lvm
+        state: present
+    - name: create datavg volume group
+      lvg:
+        vg: datavg
+        pvs: "/dev/{{ new_disk_name }}{% if 'nvm' in new_disk_name %}p1{% else %}1{% endif %}"
+        state: present
+      ignore_errors: yes
+    - name: "create lv{{ data_dir.split('/')|last|replace('_', '')|replace('-', '')|replace('/', '') }} logical volume" 
+      lvol:
+        lv: "lv{{ data_dir.split('/')|last|replace('_', '')|replace('-', '')|replace('/', '') }}"
+        vg: datavg
+        size: 100%VG
+        state: present
+    - name: create xfs filesystem
+      filesystem:
+        fstype: xfs
+        dev: "/dev/mapper/datavg-lv{{ data_dir.split('/')|last|replace('_', '')|replace('-', '')|replace('/', '') }}"
+    - name: "check that {{ install_user|d('ubuntu') }} exists"
+      command: "id {{ install_user|d('ubuntu') }}"
+      changed_when: false
+      failed_when: false
+      register: id_user
+    - name: "create {{ data_dir }}"
+      file:
+        path: "{{ data_dir }}"
+        state: directory
+        owner: "{% if id_user.rc == 0 %}{{ install_user|d('ubuntu') }}{% else %}{{ omit }}{% endif %}"
+        group: "{% if id_user.rc == 0 %}{{ install_user|d('ubuntu') }}{% else %}{{ omit }}{% endif %}"
+    - name: "mount {{ data_dir }}"
+      mount:
+        src: "/dev/mapper/datavg-lv{{ data_dir.split('/')|last|replace('_', '')|replace('-', '')|replace('/', '') }}"
+        path: "{{ data_dir }}"
+        fstype: xfs
+        state: mounted
+    - name: "correct rights on {{ data_dir }}"
+      file:
+        path: "{{ data_dir }}"
+        state: directory
+        owner: "{% if id_user.rc == 0 %}{{ install_user|d('ubuntu') }}{% else %}{{ omit }}{% endif %}"
+        group: "{% if id_user.rc == 0 %}{{ install_user|d('ubuntu') }}{% else %}{{ omit }}{% endif %}"
+  when: block_dev.stdout_lines|length > 1 and new_disk_name is defined

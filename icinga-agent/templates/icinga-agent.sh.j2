@@ -1,0 +1,102 @@
+#!/bin/sh
+
+ICINGA2_NODENAME="{{ node_name }}"
+ICINGA2_SERVER="{{ icinga_server }}.imtf-devops.com"
+ICINGAWEB_USER="{{ icingaweb_user }}"
+ICINGAWEB_PASS="{{ icingaweb_pass }}"
+NODE_TEMPLATE="{{ node_template }}"
+
+usage() {
+    echo "Usage: $(basename "$0") <register|unregister>"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+CURL=$(which curl)
+
+if [ -z "$CURL" ]; then
+    echo "cURL not found !"
+    exit 1
+fi
+
+JQ=$(which jq)
+
+if [ -z "$JQ" ]; then
+    echo "jq not found !"
+    exit 1
+fi
+
+case $1 in
+    register)
+        st_code=$($CURL -X GET --output /dev/null --write-out "%{http_code}" --silent \
+                        -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                        "https://${ICINGA2_SERVER}/icingaweb2/director/host?name=${ICINGA2_NODENAME}")
+        if [ "${st_code}" = "200" ]; then
+            echo "Already registered !"
+            exit 0
+        fi
+
+        # if [ -f /etc/ansible/facts.d/tags.fact ]; then
+        #     IMPORT_NAME=$(/etc/ansible/facts.d/tags.fact | $JQ ".MonitoringGroup")
+        #     if [ "${IMPORT_NAME}" = "null" ]; then
+        #         USAGES=$(/etc/ansible/facts.d/tags.fact | $JQ '.Usage')
+        #         for usage in $(echo "$USAGES" | tr ',' ' '); do
+        #             if [ "${IMPORT_NAME}" = "null" ]; then
+        #                 IMPORT_NAME="$(/etc/ansible/facts.d/tags.fact | $JQ '.Product')-$usage"
+        #             else
+        #                 IMPORT_NAME="${IMPORT_NAME},$(/etc/ansible/facts.d/tags.fact | $JQ '.Product')-$usage"
+        #             fi
+        #         done
+        #     fi
+        # else
+        #     IMPORT_NAME="${NODE_TEMPLATE}"
+        # fi
+        IP=$(hostname -I | awk '{print $1;}')
+        st_code=$($CURL -X POST --output /dev/null --write-out "%{http_code}" --silent \
+                  -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                  "https://${ICINGA2_SERVER}/icingaweb2/director/host" \
+                  -d "{\"address\": \"${IP}\", \"imports\": [\"${NODE_TEMPLATE}\"], \"object_name\": \"${ICINGA2_NODENAME}\", \"object_type\": \"object\", \"vars.index\": \"{{ tag_index|d('') }}\", \"vars.environment\": \"{{ tag_name|d(inventory_hostname) }}\"}")
+        if [ "${st_code}" != "201" ]; then
+            echo "ERROR while registering node !"
+            exit 1
+        fi
+        st_code=$($CURL -X POST --output /dev/null --write-out "%{http_code}" --silent \
+                  -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                  "https://${ICINGA2_SERVER}/icingaweb2/director/config/deploy")
+        if [ "${st_code}" != "200" ]; then
+            echo "ERROR while deploying new configuration !"
+            exit 1
+        else
+            echo "node successfully registered"
+        fi;;
+    unregister)
+        st_code=$($CURL -X GET --output /dev/null --write-out "%{http_code}" --silent \
+                        -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                        "https://${ICINGA2_SERVER}/icingaweb2/director/host?name=${ICINGA2_NODENAME}")
+        if [ "${st_code}" != "200" ]; then
+            echo "Already unregistered !"
+            exit 0
+        fi
+
+        st_code=$($CURL -X DELETE --output /dev/null --write-out "%{http_code}" --silent \
+                        -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                        "https://${ICINGA2_SERVER}/icingaweb2/director/host?name=${ICINGA2_NODENAME}")
+        if [ "${st_code}" != "200" ]; then
+            echo "ERROR while deleteting node !"
+            exit 1
+        fi
+        st_code=$($CURL -X POST --output /dev/null --write-out "%{http_code}" --silent \
+                  -H 'Accept: application/json' -u "${ICINGAWEB_USER}:${ICINGAWEB_PASS}" \
+                  "https://${ICINGA2_SERVER}/icingaweb2/director/config/deploy")
+        if [ "${st_code}" != "200" ]; then
+            echo "ERROR while deploying new configuration !"
+            exit 1
+        else
+            echo "node successfully unregistered"
+        fi;;
+    *) usage;;
+esac
+

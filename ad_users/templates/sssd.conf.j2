@@ -1,0 +1,133 @@
+# https://linux.die.net/man/5/sssd.conf
+# https://linux.die.net/man/5/sssd-ldap
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/6.3_technical_notes/sssd
+
+# This configuration of sssd enables authentication+authorization of users
+# from Active Directory using ssh, *without* having to join a domain.
+# 
+# You can instead configure sssd to work only after joining a domain, which
+# may give you some benefits (?), but is generally more of a pain to do.
+# (https://ubuntu.com/server/docs/service-sssd)
+# (https://wiki.debian.org/AuthenticatingLinuxWithActiveDirectorySssd)
+# (https://blog.ronnyvdb.net/2019/02/22/howto-linux-active-directory-integration-with-sssd/)
+
+
+[sssd]
+config_file_version = 2
+domains = {{ ad_domain_name }}
+
+# If you do not enable service nss, then login will fail!
+# /etc/nsswitch.conf must have these values at least:
+#     passwd:         compat systemd sss
+#     shadow:         compat sss
+# 
+# If you also add the following, login may take a very long time
+# as all the groups' details are retrieved.
+#     group:          compat systemd sss
+
+
+#services = nss, pam, ssh, sudo
+services = nss, pam, ssh
+
+full_name_format = %1$s
+enable_files_domain = false
+debug_level = 4
+
+
+[nss]
+# Add your system's users and groups to prevent sssd from looking up these names.
+# 
+# NOTE: check here if you can't login or find a group, as it may have been filtered out!
+
+filter_users    = _apt backup bin daemon dnsmasq games gnats irc landscape list lp lxd mail man messagebus news nobody ntp pollinate proxy root smmsp smmta sshd sssd statd sync sys syslog systemd-network systemd-resolve uucp uuidd vagrant vboxadd www-data ec2-user centos admin
+
+filter_groups   = adm audio backup bin cdrom crontab daemon dialout dip disk docker fax floppy games gnats input irc kmem landscape list lp lpadmin lxd mail man messagebus mlocate netdev news nogroup ntp operator plugdev proxy root sambashare sasl shadow smmsp smmta src ssh sssd staff sudo sys syslog systemd-journal systemd-network systemd-resolve tape tty users utmp uucp uuidd vagrant vboxsf video voice www-data
+
+
+[pam]
+#offline_credentials_expiration = 7
+
+
+[domain/{{ ad_domain_name }}]
+
+debug_level = 4
+
+cache_credentials = true
+entry_cache_timeout = 600
+
+# Do not treat user and group names as case-sensitive
+case_sensitive = false
+
+# setting enumerate=true will enumerate all users/groups at sssd start-up.
+# this takes a lot of time, a lot of CPU, but also a lot of memory (>2GB!).
+# the benefit is faster login times once it's done enumerating.
+enumerate   = false
+
+#fallback_homedir = /home/%u@%d
+fallback_homedir = /home/%u
+default_shell = /bin/bash
+
+auth_provider   = ldap
+access_provider = ldap
+id_provider     = ldap
+
+{% if ad_uri.startswith('ldaps') %}
+ldap_id_use_start_tls   = true
+#ldap_tls_reqcert        = demand
+ldap_tls_reqcert        = allow
+ldap_tls_cacert         = /etc/pki/tls/ad-cert.pem
+ldap_tls_cacertdir      = /etc/openldap/cacerts
+{% else %}
+ldap_id_use_start_tls   = false
+ldap_tls_reqcert        = never
+{% endif %}
+ldap_network_timeout    = 3
+
+ldap_id_mapping = true
+ldap_referrals = false
+
+#ldap_user_extra_attrs       = altSecurityIdentities:altSecurityIdentities
+#ldap_user_ssh_public_key    = altSecurityIdentities
+#ldap_use_tokengroups        = true
+
+# https://blog.redbranch.net/2016/06/07/sssd-ldap-no-group-members-shown/
+#ldap_schema             = rfc2307
+ldap_schema             = AD
+
+ldap_uri            = {{ ad_uri }}
+
+ldap_search_base    = {{ ad_search_base }}
+ldap_group_member   = member
+
+# This is where you set the LDAP filter that will AUTHORIZE users to login.
+# (triggered by 'access_provider = ldap' above)
+#ldap_access_order   = filter
+ldap_access_order   = filter, expire
+ldap_account_expire_policy = ad
+
+ldap_access_filter = {{ ad_search_filter }}
+
+# Use LDAP to look up sudo rules.
+# For this to work, you have to add sudo rules to Active Directory.
+# (https://jhrozek.livejournal.com/3860.html) (https://www.sudo.ws/man/sudoers.ldap.man.html)
+#sudo_provider           = ldap
+#ldap_sudo_search_base   = <put your search base here>
+# 
+# You don't *need* to use the sudo plugin. You can use the native nss resolving of
+# users and groups, along with a regular sudo configuration.
+# But keep in mind that the *groups* identified with a user are a specific thing,
+# and not the same as simply a 'memberOf' entry for a user. So a user may have
+# 30 'memberOf' entries, but the actual *groups* you will see at log-in may
+# be much fewer. Add an Active Directory *group* for regular sudo rules to match.
+# (https://access.redhat.com/discussions/2950661)
+sudo_provider           = none
+
+# This limits how deep sssd will look for nested AD groups.
+# This doesn't typically need to be set, and disabling tokengroups
+# may mess with LDAP public key auth.
+ldap_group_nesting_level    = 0
+ldap_use_tokengroups        = false
+
+# Bind DN and password (plaintext)
+ldap_default_bind_dn = {{ ad_bind_dn }}
+ldap_default_authtok = {{ ad_bind_password }}

@@ -1,0 +1,26 @@
+---
+- name: prompt if mandatory variables are not defined
+  pause:
+    prompt: "Enter value for {{ item }} variable"
+  when: item not in vars
+  register: prompt_for_vars
+  loop:
+    - instance_name
+    - env_vars
+
+- name: set prompted vars
+  set_fact: { "{{ item.item }}": "{{ item.user_input }}" }
+  when: item is not skipped
+  loop: "{{ prompt_for_vars.results }}"
+
+- name: load additional env vars
+  include_vars: "{{ env_vars }}"
+
+- name: get server_vars variable to the top-level
+  set_fact: {"{{ item.key }}":"{{ item.value }}"}
+  loop: "{{ server_vars|d({})|dict2items }}"
+
+- name: choose template image
+  set_fact:
+    image_name: "{{ template_name|d('imtf-icos-template-jdk' + jdk_version|d('1.11')) }}"
+

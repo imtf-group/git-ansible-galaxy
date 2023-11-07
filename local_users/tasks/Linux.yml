@@ -1,0 +1,80 @@
+---
+- name: Check if current user is root
+  command: id -u
+  register: current_id
+  failed_when: current_id.stdout != "0"
+  changed_when: false
+
+- name: create facts directory
+  file:
+    path: /etc/ansible/facts.d/
+    state: directory
+    recurse: true
+- name: copy user fact file
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/ansible/facts.d/{{ item }}"
+    mode: "0755"
+  loop: [users.fact, groups.fact]
+
+- name: create technical group
+  group:
+    name: technical
+    gid: 5202
+    state: present
+
+- name: "add {{ admin_user_dict[ansible_os_family] }} to technical group"
+  user:
+    name: "{{ admin_user_dict[ansible_os_family] }}"
+    groups:
+      - technical
+    append: true
+    state: present
+
+- name: get installed user list
+  setup:
+    filter: ansible_local
+
+- name: copy script to create users and groups
+  template:
+    src: gen_users.sh.j2
+    dest: /tmp/gen_users.sh
+    mode: "0755"
+
+- name: execute script to add/remove users
+  command: /tmp/gen_users.sh
+  register: user_cmd
+  failed_when: false
+  changed_when: user_cmd.rc == 255
+
+- name: update PAM
+  lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: "# account  required     pam_access.so"
+    line: "account  required     pam_access.so"
+    state: present
+  when: tag_product is defined
+  notify: reload ssh
+
+- name: update access.conf
+  template:
+    src: access.conf.j2
+    dest: /etc/security/access.conf
+    mode: "0644"
+    owner: root
+    group: root
+  when: tag_product is defined
+  notify: reload ssh
+
+- name: add sudoers configuration
+  template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/users
+    mode: "0644"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: tag_product is defined
+
+- name: delete old sudoers configuration
+  file:
+    path: /etc/sudoers.d/90-cloud-init-users
+    state: absent

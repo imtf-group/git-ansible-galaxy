@@ -1,0 +1,60 @@
+---
+- name: install prerequisites packages
+  apt:
+    state: present
+    name:
+      - curl 
+      - ca-certificates 
+      - apt-transport-https
+
+- name: Download repository configuration script
+  get_url:
+    url: https://downloads.mariadb.com/MariaDB/mariadb_repo_setup
+    dest: /tmp/mariadb_repo_setup
+    mode: "0644"
+
+- name: Create MariaDB repository from script
+  command: "bash /tmp/mariadb_repo_setup --mariadb-server-version=mariadb-{{ mysql_version }} --skip-maxscale"
+  args:
+    creates: /etc/apt/sources.list.d/mariadb.list
+
+- name: install MariaDB
+  apt:
+    state: present
+    update_cache: true
+    name:
+      - "mariadb-server-{{ mysql_version }}"
+      - python3-mysqldb
+      - python3-mysql.connector
+      - iputils-ping
+  register: db_pkg
+  until: db_pkg is success
+  retries: 10
+  delay: 15
+
+- name: Stop mariadb before configuration
+  service:
+    name: mariadb
+    state: stopped
+  when: db_pkg is changed
+
+- name: Install global config file
+  copy:
+    content: |
+      !includedir /etc/mysql/conf.d
+    dest: /etc/mysql/my.cnf
+  notify: restart db
+
+- name: Install network config file
+  template:
+    src: server.cnf.j2
+    dest: /etc/mysql/conf.d/server.cnf
+    mode: "0644"
+  notify: restart db
+
+- name: Install Debian maintenance file
+  template:
+    src: debian.cnf.j2
+    dest: /etc/mysql/debian.cnf
+    mode: "0644"
+  notify: restart db

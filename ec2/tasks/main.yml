@@ -1,0 +1,15 @@
+---
+- name: check if a instance name has been specified
+  assert:
+    that: instance_name is defined
+
+- name: set instance_name_lower variable
+  set_fact:
+    instance_name_lower: "{{ instance_name }}"
+
+- name: Correct instance_name if needed
+  set_fact:
+    instance_name_lower: "{{ instance_name_lower|lower|replace(item, '-') }}"
+  loop: [' ', '_', ':', "'", '.', '=']
+
+- include_tasks: "{{ ec2_action }}.yml"

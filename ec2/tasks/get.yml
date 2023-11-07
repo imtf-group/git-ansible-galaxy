@@ -1,0 +1,31 @@
+---
+- name: instance running
+  ec2_instance_info:
+    aws_access_key: "{{ (aws|default(omit)).access_key|default(omit) }}"
+    aws_secret_key: "{{ (aws|default(omit)).secret_key|default(omit) }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+      instance-state-name: [ "running", "stopping", "stopped" ]
+  register: ec2_inst
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}-{{ item.tags['Index'] }}"
+    group: ec2
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+    tag_index: "{{ item.tags['Index'] }}"
+  when: "'Index' in item.tags"
+  loop: "{{ ec2_inst.instances }}"
+  changed_when: false
+- name: add to inventory
+  add_host:
+    name: "{{ item.tags['Name'] }}"
+    group: ec2
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_ssh_extra_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    tag_name: "{{ item.tags['Name'] }}"
+  when: "'Index' not in item.tags"    
+  loop: "{{ ec2_inst.instances }}"
+  changed_when: false

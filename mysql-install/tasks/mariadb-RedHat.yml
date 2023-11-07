@@ -1,0 +1,49 @@
+---
+- name: Disable SELinux
+  selinux:
+    state: disabled
+
+- name: install prerequisites packages
+  apt:
+    state: present
+    name:
+      - curl 
+      - ca-certificates
+
+- name: Download repository configuration script
+  get_url:
+    url: https://downloads.mariadb.com/MariaDB/mariadb_repo_setup
+    dest: /tmp/mariadb_repo_setup
+    mode: "0644"
+
+- name: Create MariaDB repository from script
+  command: "bash /tmp/mariadb_repo_setup --mariadb-server-version=mariadb-{{ mysql_version }} --skip-maxscale"
+  args:
+    creates: /etc/yum.repos.d/mariadb.repo
+
+- name: install MariaDB
+  yum:
+    state: present
+    update_cache: true
+    name:
+      - mariadb-server
+      - python3-PyMySQL
+      - MySQL-python
+      - iputils
+  register: db_pkg
+  until: db_pkg is success
+  retries: 10
+  delay: 15
+
+- name: Install global config file
+  copy:
+    content: |
+      !includedir /etc/my.cnf.d
+    dest: /etc/my.cnf
+  notify: restart db
+
+- name: Install network config file
+  template:
+    src: server.cnf.j2
+    dest: /etc/my.cnf.d/server.cnf
+  notify: restart db

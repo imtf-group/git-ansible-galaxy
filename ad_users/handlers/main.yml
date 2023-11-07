@@ -1,0 +1,30 @@
+---
+- name: execute authconfig
+  command: >
+    {% if ansible_distribution_major_version|int < 8 %}
+    authconfig --enableldap --enableldapauth --enablefaillock --enablemkhomedir --enablepamaccess --updateall
+    {% else %}
+    authselect select sssd with-mkhomedir with-pamaccess --force
+    {% endif %}
+
+- name: restart sssd
+  systemd:
+    name: sssd
+    state: restarted
+    enabled: true
+
+- name: restart oddjobd
+  systemd:
+    name: oddjobd
+    state: restarted
+    enabled: true
+
+- name: restart systemd-logind
+  systemd:
+    name: systemd-logind
+    state: restarted
+
+- name: restart ssh
+  systemd:
+    name: sshd
+    state: restarted

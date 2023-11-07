@@ -1,0 +1,69 @@
+---
+product_groups_dict:
+  Adapter:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+  ICOS:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+  CCM:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+    - openvpnusers
+  FM:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+    - openvpnusers
+  ACM v2:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+  ACM v3:
+    - dms_manager
+    - dms_employee
+    - dms_project_manager
+    - openvpnusers
+  Find-it PC:
+    - dms_manager
+    - dms_project_manager
+    - openvpnusers
+    - dms_employee
+  I-match v5:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+  I-match v6:
+    - dms_manager
+    - dms_project_manager
+    - openvpnusers
+    - dms_employee
+  I-match v7:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+  Siron AFCS:
+    - dms_manager
+    - dms_project_manager
+    - openvpnusers
+    - dms_employee
+  Hypersuite/5:
+    - dms_employee
+    - dms_project_manager
+    - dms_manager
+  Medstandards:
+    - dms_manager
+    - dms_project_manager
+    - openvpnusers
+    - dms_employee
+  ZV/2:
+    - dms_manager
+    - dms_project_manager
+    - dms_employee
+
+admin_user_dict:
+  Debian: ubuntu
+  RedHat: ec2-user

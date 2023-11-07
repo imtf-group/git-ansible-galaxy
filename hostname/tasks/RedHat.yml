@@ -1,0 +1,23 @@
+---
+- name: change local hostname
+  hostname:
+    name: "{{ hostname }}.{{ hostname_domain }}"
+
+- name: update /etc/hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    mode: "0644"
+
+- name: update resolv.conf
+  lineinfile:
+    line: SEARCH="{{ hostname_domain }}"
+    path: /etc/sysconfig/network-scripts/ifcfg-eth0
+    state: present
+  register: upd_resolv
+
+- name: restart NetworkManager
+  systemd:
+    name: NetworkManager
+    state: restarted
+  when: upd_resolv is changed

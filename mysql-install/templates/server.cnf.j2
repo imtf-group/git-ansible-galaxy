@@ -1,0 +1,39 @@
+# Mariadb server settings
+#
+# {{ ansible_managed }}
+
+[server]
+
+[mysqld]
+{% if mysql_engine == 'mariadb' %}
+plugin-load-add       = auth_socket.so
+{% endif %}
+user                  = mysql
+pid-file              = {{ mysql_install_dir }}/mysqld.pid
+socket                = {{ mysql_install_dir }}/mysqld.sock
+port                  = {{ mysql_port }}
+basedir               = /usr
+datadir               = {{ mysql_data_dir }}
+tmpdir                = /tmp
+skip-external-locking
+{% if mysql_bind_address is defined %}
+bind-address          = {{ mysql_bind_address }}
+{% endif %}
+key_buffer_size	      = 16M
+max_allowed_packet    = 16M
+thread_stack          = 192K
+thread_cache_size     = 8
+max_connections       = 500
+
+log_error             = {{ mysql_log_dir }}/error.log
+expire_logs_days      = 10
+max_binlog_size       = 100M
+
+character-set-server  = utf8mb4
+collation-server      = utf8mb4_general_ci
+
+[client]
+socket                = {{ mysql_install_dir }}/mysqld.sock
+port                  = {{ mysql_port }}
+
+[embedded]

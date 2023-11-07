@@ -1,0 +1,6 @@
+---
+- name: check data_dir variable is defined
+  assert:
+    that: data_dir is defined
+
+- include: "{{ os_family_dict[ansible_os_family] }}.yml"

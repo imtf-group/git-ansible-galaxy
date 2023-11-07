@@ -1,0 +1,26 @@
+---
+- block:
+    - name: Copy update facts file
+      win_copy:
+        src: "{{ item }}.ps1"
+        dest: C:\Ansible\facts.d\
+        force: true
+      loop: [users, sqlusers]
+
+    - name: get installed user list
+      setup:
+        filter: "ansible_{{ item }}"
+        fact_path: C:\Ansible\facts.d
+      loop: [users, sqlusers]
+
+    - name: copy script to create users and groups
+      win_template:
+        src: gen_users.ps1.j2
+        dest: C:\Windows\Temp\gen_users.ps1
+
+    - name: execute script to add/remove users
+      win_command: powershell.exe C:\Windows\Temp\gen_users.ps1
+      register: user_cmd
+      failed_when: false
+      changed_when: user_cmd.rc == 255
+  when: ansible_distribution_version != "6.3.9600.0"

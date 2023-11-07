@@ -1,0 +1,10 @@
+---
+db_users: []
+mysql_engine: mysql
+mysql_port: 3306
+mysql_version: 5.7
+install_dir: /var
+mysql_install_dir: "{{ install_dir }}/{{ mysql_engine }}"
+mysql_data_dir: "{{ mysql_install_dir }}/data"
+mysql_log_dir: "{{ mysql_install_dir }}/log"
+mysql_root_password: ImtfImtf+

@@ -1,0 +1,29 @@
+---
+- name: get time configuration
+  command: timedatectl status
+  changed_when: false
+  register: time_conf
+
+- name: "set timezone as {{ timezone }}"
+  command: "timedatectl set-timezone {{ timezone }}"
+  when: "'Time zone: ' + timezone not in time_conf.stdout"
+
+- block:
+    - name: check if ntp is registered
+      service_facts:
+
+    - name: Deregister ntp at startup
+      systemd:
+        name: ntp
+        enabled: false
+        state: stopped
+      when: "'ntp.service' in ansible_facts.services"
+
+    - name: Register systemd-timesyncd at startup
+      systemd:
+        name: systemd-timesyncd
+        enabled: true
+        state: started
+      when: "'systemd-timesyncd.service' in ansible_facts.services"
+      failed_when: false
+  when: ansible_distribution_release != "xenial"

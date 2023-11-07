@@ -1,0 +1,15 @@
+#!/bin/sh
+# {{ ansible_managed }}
+#
+
+LOGFILE=/var/log/certbot.log
+
+docker run --rm --name certbot-renew \
+       -v "/etc/letsencrypt:/etc/letsencrypt" \
+       -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
+       certbot/dns-route53 renew > $LOGFILE 2>&1
+
+if grep -q "No renewals were attempted" $LOGFILE; then
+  exit 0
+fi
+echo "Certificates renewed" >> $LOGFILE
