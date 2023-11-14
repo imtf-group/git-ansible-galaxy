@@ -225,11 +225,6 @@ user_dict:
     comment: Prachir Gupta
     ssh_key:
       - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCx2uPp4XWbo8FGbO3KwE68LK8p5tOtz30vk1KXMy8Im+8NRH6uATlhpzJUeBZQQXSOnO09kU4gZM98kzkILlP+JgE/5LGeQIBSqSs86EOA+gyu5nKVuEynBEm+pWng72xO9J1bMjQRpp2ECDSTGwgUFWDDDKlCuNAYyhOTQhvdq1U4YeU5evCQBFZmyaBKfk6zazdf3CyeWLp6U+AfEPbvSYgOedAtbfxVZsyVo8P/Tp4Bqv4gXONJGLa2diwn1qERabij+7feDs8iHHK/9mGAx2H6Z/6TcKwkqWsnxXXoDs6bc40m0zdX5RGUZAFWXHflnFzAISs89Bgy5LOuI6C667KmLKqbiPHpr9arld3VqBhKPhgn+LyLSafWcp8CQ22QPPnqhc1lIPkIZyqH2JjE6VV1Ba+ZIrNxInuklCGmSukGkzM1UNzEckX4cb/k2ScEpY7xSibBiZLaWRhjITsiLOugjQEZ9K7VkDozRdx2Rv/5IJKcFq2fQIzszk7htns= PGU@LTPPGU"
-  - name: gpe
-    uid: 5166
-    comment: Gaël Pellissier
-    ssh_key:
-      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDkOUK8iUX23VB7iW9EiahnF/y+ZIm6juR3d1N+EBxC7MzvTe5D2wyGa2LCitwYuRX3GuEmKVUczlDucGT/Kt1txkWXCmyjkdp9zgBkWoQ6Fjf+AR+otWzP0qre5bpO0e6aRdV6ln61+XanO6LQ+UrzM5rot8qmhWDdUnBvzQrMOJCFCWIsBG7QC244j9ZIFPHNTn1kciF8nZftN19Dr/zuJNWKgT9iwdSntNsWzTcGWhlUKTMLacHrFIXNywSKzbwTZfbzt+nG1+3jxhfTdQBkmNDFVpj6L7HEGFLuiG6uJ2HM5IR+5H/Ixsxvy3TcPAV6A2nbL6b91VIuQWWStCBD imtfgpe@LTPGPE"
   - name: sbi
     uid: 5167
     comment: Sim Bindiganavale
