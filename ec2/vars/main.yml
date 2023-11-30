@@ -30,8 +30,8 @@ environmenttype_dict:
   - TEST
 
 url_dict:
-  CCM: "http://{{ instance_name_lower }}.imtf-devops.com:8181/login"
-  "ACM v3": "http://{{ instance_name_lower }}.imtf-devops.com:8181/login"
+  CCM: "http://{{ instance_name_lower }}.imtf-devops.com:8181"
+  "ACM v3": "http://{{ instance_name_lower }}.imtf-devops.com:8181"
   "ACM v2": "https://{{ instance_name_lower }}.imtf-devops.com/case2/#/login?next=/"
   "I-match v6": "http://{{ instance_name_lower }}.imtf-devops.com:8080/index.html"
   "Find-it PC": "https://{{ instance_name_lower }}.imtf-devops.com:8080/findit/detectTopics.html"
