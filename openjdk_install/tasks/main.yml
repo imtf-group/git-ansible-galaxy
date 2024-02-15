@@ -1,2 +1,2 @@
 ---
-- include: "{{ distribution_dict[ansible_os_family] }}.yml"
+- include_tasks: "{{ distribution_dict[ansible_os_family] }}.yml"
