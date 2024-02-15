@@ -1,2 +1,2 @@
 ---
-- include: "{{ sdkman_action }}.yml"
+- include_tasks: "{{ sdkman_action }}.yml"
