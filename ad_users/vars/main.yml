@@ -4,6 +4,7 @@ product_groups_dict:
     - dms_manager
     - dms_project_manager
     - dms_employee
+    - aws_developer
   ICOS:
     - dms_manager
     - dms_project_manager
