@@ -329,4 +329,10 @@ user_dict:
     comment: Ngoc Nguyen
     ssh_key:
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIbfPSAwqwXuAGDv3GkwiF/ChEZW84+7ce+OhzF+hzO6 ngoc.nguyen@imtf.com"
+  - name: lct
+    uid: 5200
+    comment: LayChing Teo
+    ssh_key:
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCx4ugUpTtQDOezXSQGzirjDwxZxgcBfg2MSHfekpGULrQ9N4x13MGo2bN4s5S0kyflZ1INC7B5sWZtIGNGf7HyvZwcY16deTXadDFI3fymshnEhpotz33CHahdsyGstEDGKqAlZyCi7b9vrcdHiPDMYIO7kegAyK3+DIoZGaTxlgPRWvdskCQfdkLF2+lLvvL0322EV2mObMPsiY/tnaP/leqDFgPtSkzMnyyY/EHkdjpKxIXeDeTYpkY7Oboz6sZvm1vtRXJrhBl1UIxxLyUiKIgW1dVLiY6WgtxhEBSSER8+ZavLiV1Cis4XuHW/PHHs2dWg8oTD4BoA+2QJpNJQOnhY5Q/nPhdPHf/3bnRn4pbFh9pgMl4zgnp+QbSMnViK+GpBxIuK/MnJrdkguezgAdZTeTIQNAsx1czRF7zI5w/w3q11vNjZ0nHsBcPMd1jGZcjLdWSeg7ql+D9Ro0rulKnFfRo6qN53JkQecy59SR6zEWXRsTx10BS3IAlqCrk= imtf\layching.teo@DESKTOP-CG7C866"
+
 
