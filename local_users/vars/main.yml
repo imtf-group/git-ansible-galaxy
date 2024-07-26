@@ -334,4 +334,8 @@ user_dict:
     comment: LayChing Teo
     ssh_key:
       - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCcPv9M0/Pi4gazq/kGmDbXMzH0Tkcd0wKv2teS9RqCTQBx+0X3f2kXS46YfOfnWzyM9NMUwomtrXa0CrRvoTexN8RDtOWPsGfdhVhVsta0h3AW/Wtf9nDoKHCF6JoLPRT0e3xyimbWiTuFO9M4xcuCzwWMsZcEMew7eAJwloZj/SoGvKwN2WNm/eS0rSCfVuxCuOf03mbOhUjGaRqJ9T6Fa0e033VHpLWM3njWuSV8sRE4VjjPws1XBe+jaB7AJoLXcvv8Km0eav3hGqWKkKVpuExGjSZ2gYzmeYFhpaPoec2/dbVY4VyLnk3J8XWjAup6Urd05WGYcm4+lBpRH2aN"
-
+  - name: bbm
+    uid: 5201
+    comment: Buddhadeb Mukherjee
+    ssh_key:
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxl7/RcX7PZ9AT/zEgJ63MmNOqSHQpalbsmTkdL/jAXAQhi9REy5a6qks+Pb5Gh8w3CEH0/BlYTLk42SxS9JP1UjA3ely/gPRLALs8hWE3rROzUwPd8uUSqFrUuMGAnCzAyW6tv7EEvw0FoW3RKtoA4UAQYuXZRxPJhb7DBSsImm6k+hL9WbycQxr09xtJEsQ/B4OkbXaARvJ2EmpknHNkEMPg0v31c6+rpztCNk0nPvPcoAsk1IFcGpVHRCX0abC/hDFasBK43+sCdlyQmTyYmunaerD+yp3EIEINpUCUHgGvaB/7JsezYNoT451hTxspEmWu7NnvmZ7bYcCQpk7k+1ZxmT/gRRN6EGdZDiGVqv5W85GmB5PEAdNRVKpRwxsPo1DmnGv6f4C80n4O34z/zZQB7432e+9JuAVMFCZph14B9KMvIv4i2Cb42aKRl4wTGh5L/Q6GLsVxFLcWObzJuRry+fGiad19DjOp82VTTAf6EUd79R+361IN2/FeuIE= buddhadeb.mukherjee@imtf.com"
