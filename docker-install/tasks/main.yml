@@ -11,8 +11,8 @@
   pip:
     name:
       - pip
-      - docker
-      - requests
+      - docker==5.0.3
+      - requests==2.27.1
     state: present
 
 - name: Activate Docker API
