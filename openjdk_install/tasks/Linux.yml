@@ -11,13 +11,22 @@
     remote_src: true
     list_files: true
   register: tar_contents
-- name: "Create symlink from /opt/{{ tar_contents.files[0] }}/bin/java to /usr/bin/java"
-  file:
-    src: "/opt/{{ tar_contents.files[0] }}/bin/java"
-    dest: /usr/bin/java
-    state: link
 - name: "Create symlink from /opt/{{ tar_contents.files[0] }} to /opt/jdk{{ jdk_version | regex_replace('^jdk-?(?P<version>[0-9]+).*$', '\\g<version>') }}"
   file:
     src: "/opt/{{ tar_contents.files[0] }}"
     dest: "/opt/jdk{{ jdk_version | regex_replace('^jdk-?(?P<version>[0-9]+).*$', '\\g<version>')  }}"
     state: link
+
+- name: update alternatives
+  command: "update-alternatives --install /usr/bin/{{ item }} {{ item }} /opt/{{ tar_contents.files[0] }}/bin/{{ item }} 1"
+  loop:
+    - keytool
+    - java
+    - javac
+
+- name: set alternatives
+  command: "update-alternatives --set {{ item }} /opt/{{ tar_contents.files[0] }}/bin/{{ item }}"
+  loop:
+    - keytool
+    - java
+    - javac
