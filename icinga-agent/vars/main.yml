@@ -1,5 +1,0 @@
----
-node_template_dict:
-  Debian: basic-servers
-  RedHat: basic-servers
-  Windows: basic-servers-windows
