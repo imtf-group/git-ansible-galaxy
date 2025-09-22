@@ -1,7 +1,0 @@
----
-- name: check is current user has sudo rights
-  command: /bin/true
-  become: true
-  changed_when: false
-
-- include_tasks: "{{ ansible_os_family }}.yml"

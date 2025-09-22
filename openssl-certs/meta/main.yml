@@ -1,6 +1,0 @@
-galaxy_info:
-  author: Jean-Baptiste Langlois
-  description: Generate self-signed certificates
-  company: IMTF
-  min_ansible_version: 2.4
-  

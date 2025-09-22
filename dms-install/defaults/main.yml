@@ -1,6 +1,0 @@
----
-profile_environment: dev
-nexus_server: nexus.imtf-devops.com
-nexus_repository: imtf-group
-install_dir: /opt
-
