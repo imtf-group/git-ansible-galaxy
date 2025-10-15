@@ -339,3 +339,8 @@ user_dict:
     comment: Amith CN
     ssh_key:
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPkJBcNP0YEjTLabR8pEauSJPjROvm9kQQ39NdcfwLBw amith.cn@imtf.com"
+  - name: spu
+    uid: 5203
+    comment: sumith.pullanikkal
+    ssh_key:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPK04Wb2j1kqiBxV8fZtojN6N2RdPpVi+/3r4v9sTESf sumith.pullanikkal@imtf.com"
