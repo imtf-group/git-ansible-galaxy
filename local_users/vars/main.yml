@@ -344,3 +344,9 @@ user_dict:
     comment: sumith.pullanikkal
     ssh_key:
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPK04Wb2j1kqiBxV8fZtojN6N2RdPpVi+/3r4v9sTESf sumith.pullanikkal@imtf.com"
+  - name: hzh
+    uid: 5204
+    comment: Hao Zac Chin
+    ssh_key:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIERyWAHzPv17o9vK7EV+ZcmmdYPyVKTYTRTb5uOS/aLv haozac.chin@imtf.com"
+
