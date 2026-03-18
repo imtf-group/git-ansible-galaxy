@@ -18,6 +18,16 @@
     update_cache: true
     state: present
 
+- name: check if tlog is installed
+  stat:
+    path: /usr/bin/tlog-rec-session
+  register: st_tlog_installed
+
+- name: use tlog if installed
+  set_fact:
+    ad_default_shell: /usr/bin/tlog-rec-session
+  when: st_tlog_installed.stat.exists
+
 - name: copy SSSd configuration
   template:
     src: sssd.conf.j2
