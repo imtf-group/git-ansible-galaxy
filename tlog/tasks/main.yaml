@@ -69,3 +69,10 @@
     line: LC_ALL=C.UTF-8
     path: /etc/environment
     state: present
+- name: install tlogctl
+  copy:
+    src: tlogctl
+    dest: /usr/sbin/tlogctl
+    mode: "0700"
+    owner: root
+    group: root

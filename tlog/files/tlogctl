@@ -1,0 +1,151 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import subprocess
+import tempfile
+from datetime import datetime, timedelta
+import gzip
+import json
+import argparse
+from systemd import journal
+
+
+def parse_arguments(args: list):
+    parser = argparse.ArgumentParser(
+        prog=__file__,
+        description='replay tlog session logs')
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument(
+        '-l', '--list', action='store_true', default=False,
+        help='list available session IDs')
+    group.add_argument(
+        '-e', '--execute', dest='rec', help='replay chosen session ID')
+    parser.add_argument(
+        '-s', '--since-days', type=int, dest='since',
+        help='show entries not older than the specified date')
+    parser.add_argument(
+        '-u', '--user', help='show entries for the specified user')
+    parser.add_argument(
+        '-f', '--file',
+        help='browse the specified file rather that the journal')
+    return parser.parse_args(args)
+
+
+def tlog_play(file: str) -> bool:
+    with subprocess.Popen(
+            ["tlog-play", "--reader=file", "--file-path", file],
+            stdout=True, stderr=True) as executor:
+        executor.communicate()
+        if executor.returncode != 0:
+            return False
+    return True
+
+
+def format_duration(duration: timedelta) -> str:
+    h = m = 0
+    s = duration.seconds
+    if s > 3600:
+        h = s // 3600
+        s %= 3600
+    if s > 60:
+        m = s // 60
+        s %= 60
+    return f"{h:02}:{m:02}:{s:02}"
+
+
+def tlog_journal_reader(rec: str = None, user: str = None, since: int = None):
+    j = journal.Reader()
+    j.add_match(SYSLOG_IDENTIFIER="tlog-rec-session")
+    if rec:
+        j.add_match(TLOG_REC=rec)
+    if user:
+        j.add_match(TLOG_USER=user)
+    if since:
+        start_date = datetime.now() - timedelta(days=since)
+        j.seek_realtime(start_date)
+    else:
+        j.seek_head()
+    yield from j
+
+
+def tlog_file_reader(file: str, rec: str = None, user: str = None):
+    opener = gzip.open if file.endswith(".gz") else open
+    with opener(file, "rt", encoding="utf-8", errors="replace") as fd:
+        for line in fd:
+            entry = json.loads(line)
+            if user and entry['TLOG_USER'] != user:
+                continue
+            if rec and entry['TLOG_REC'] != rec:
+                continue
+            entry['__REALTIME_TIMESTAMP'] = \
+                datetime.fromtimestamp(
+                    int(entry['__REALTIME_TIMESTAMP']) / 1_000_000)
+            yield entry
+
+
+def tlog_details(*, user: str = None, since: int = None, file: str = None):
+    retval = {}
+    if file:
+        entries = tlog_file_reader(file=file, user=user)
+    else:
+        entries = tlog_journal_reader(user=user, since=since)
+    for entry in entries:
+        if entry['TLOG_REC'] not in retval:
+            retval[entry['TLOG_REC']] = {
+                'rec': entry['TLOG_REC'],
+                'user': entry['TLOG_USER'],
+                'time': entry['__REALTIME_TIMESTAMP']
+            }
+        retval[entry['TLOG_REC']]['duration'] = \
+            entry['__REALTIME_TIMESTAMP'] - retval[entry['TLOG_REC']]['time']
+    yield from retval.values()
+
+
+def tlog_messages(*, rec: str, file: str = None):
+    if file:
+        entries = tlog_file_reader(file=file, rec=rec)
+    else:
+        entries = tlog_journal_reader(rec=rec)
+    for entry in entries:
+        msg = entry["MESSAGE"]
+        if isinstance(msg, bytes):
+            msg = msg.decode(errors="replace")
+        yield msg
+
+
+def main(argv: list) -> bool:
+    args = parse_arguments(argv)
+    if args.file and not os.path.exists(args.file):
+        print(f"No such file or directory: '{args.file}'", file=sys.stderr)
+        return False
+    if args.list:
+        print(
+            f"{'REC'.ljust(43)} {'USER'.ljust(10)} "
+            f"{'START_TIME'.ljust(26)} DURATION")
+        for log in tlog_details(file=args.file,
+                                user=args.user,
+                                since=args.since):
+            dur = format_duration(log['duration'])
+            print(
+                f"{log['rec']} {log['user'].ljust(10)} "
+                f"{log['time']} ({dur})")
+    else:
+        gen = tlog_messages(file=args.file, rec=args.rec)
+        try:
+            first = next(gen)
+        except StopIteration:
+            print(f"No logs found for TLOG_REC={args.rec}", file=sys.stderr)
+            return False
+        with tempfile.NamedTemporaryFile() as tmp:
+            with open(tmp.name, "w", encoding="utf-8") as fd:
+                print(first, file=fd)
+                for msg in gen:
+                    print(msg, file=fd)
+            tlog_play(tmp.name)
+    return True
+
+
+if __name__ == "__main__":
+    sys.exit(0 if main(sys.argv[1:]) else 1)
