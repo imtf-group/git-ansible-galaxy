@@ -7,3 +7,4 @@ ad_search_filter: '(memberof:1.2.840.113556.1.4.1941:=CN=GITLAB_USERS_AWS,OU=Git
 ad_bind_dn: Administrator
 ad_bind_password: password
 ad_domain_name: IMTF.COM
+ad_default_shell: /bin/bash
