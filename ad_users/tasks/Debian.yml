@@ -27,6 +27,16 @@
     and 'Could not get lock' not in apt_action.msg
     and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
 
+- name: check if tlog is installed
+  stat:
+    path: /usr/bin/tlog-rec-session
+  register: st_tlog_installed
+
+- name: use tlog if installed
+  set_fact:
+    ad_default_shell: /usr/bin/tlog-rec-session
+  when: st_tlog_installed.stat.exists
+
 - name: copy SSSd configuration
   template:
     src: sssd.conf.j2
@@ -53,12 +63,6 @@
     dest: /etc/ssh/sshd_config
     mode: "0644"
   notify: restart ssh
-
-- name: add an helper to retrieve ssh keys
-  template:
-    src: public_ssh_key.sh.j2
-    dest: /etc/profile.d/public_ssh_key.sh
-    mode: "0644"
 
 - name: create technical group
   group:
