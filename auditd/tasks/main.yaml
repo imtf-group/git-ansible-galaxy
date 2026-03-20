@@ -7,14 +7,12 @@
     state: present
   when: ansible_os_family == 'Debian'
 - block:
-    - name: check if binary is present
-      shell: "yum list installed | grep audispd-plugins"
-      changed_when: false
-      failed_when: false
-      register: st_yum_auditd
     - name: install binary (RedHat)
-      command:  yum install -y audit audispd-plugins
-      when: st_yum_auditd.rc != 0
+      yum:
+        name:
+          - audit
+          - audispd-plugins
+        state: present
   when: ansible_os_family == 'RedHat'
 - name: configure auditd
   copy:
@@ -45,7 +43,8 @@
   file:
     path: "/var/log/audit/{{ inventory_hostname }}.log"
     state: touch
-  when: not st_audit_log.stat.exists
+    mode: "0700"
+  when: not st_audit_log.stat.exists or st_audit_log.stat.mode != "0700"
 - name: change rotation conf
   lineinfile:
     path: /etc/audit/auditd.conf

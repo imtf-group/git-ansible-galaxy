@@ -81,12 +81,6 @@
     mode: "0644"
   notify: restart ssh
 
-- name: add an helper to retrieve ssh keys
-  template:
-    src: public_ssh_key.sh.j2
-    dest: /etc/profile.d/public_ssh_key.sh
-    mode: "0644"
-
 - name: add sudoers configuration
   template:
     src: sudoers.j2
