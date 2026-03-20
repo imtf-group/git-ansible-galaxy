@@ -55,13 +55,14 @@
     state: present
     regexp: '^max_log_file = .*'
     line: 'max_log_file = 50'
+  notify: restart auditd
 - name: change rotation conf
   lineinfile:
     path: /etc/audit/auditd.conf
     state: present
     regexp: '^num_logs = .*'
     line: 'num_logs = 20'
-
+  notify: restart auditd
 - name: check if audit is enabled in grub
   command: grep 'GRUB_CMDLINE_LINUX="audit=1' /etc/default/grub
   failed_when: false
