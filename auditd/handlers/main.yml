@@ -4,6 +4,7 @@
     name: auditd
     state: restarted
     enabled: true
+  failed_when: false
 
 - name: reload auditd rules
   command: augenrules --load
