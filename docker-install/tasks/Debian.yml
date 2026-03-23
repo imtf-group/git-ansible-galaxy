@@ -6,8 +6,6 @@
 
 - name: get current architecture
   command: dpkg --print-architecture
-  args:
-    warn: false
   register: current_arch
   changed_when: false
 

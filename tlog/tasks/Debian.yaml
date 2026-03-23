@@ -1,0 +1,69 @@
+---
+- block:
+    - name: install binary 
+      apt:
+        name: tlog
+        state: present
+    - name: create config file
+      copy:
+        content: |
+          {
+            "shell" : "/bin/bash",
+            "notice" : "",
+            "log": {
+                "input" : true,
+                "output" : true
+            },
+            "writer": "journal"
+          }
+        dest: /etc/tlog/tlog-rec-session.conf
+        mode: "0644"
+        owner: root
+        group: root
+    - name: add tlog as allowed shell
+      lineinfile:
+        path: /etc/shells
+        state: present
+        line: '/usr/bin/tlog-rec-session'
+    - name: change default shell
+      lineinfile:
+        path: /etc/default/useradd
+        state: present
+        regexp: '^SHELL=.*$'
+        line: 'SHELL=/usr/bin/tlog-rec-session'
+    - name: tlog in sssd.conf
+      stat:
+        path: /etc/sssd/sssd.conf
+      register: st_sss
+    - lineinfile:
+        path: /etc/sssd/sssd.conf
+        state: present
+        regexp: '^default_shell = .*$'
+        line: 'default_shell = /usr/bin/tlog-rec-session'
+      when: st_sss.stat.exists
+    - name: create tlog tmpfile
+      copy:
+        content: |
+          d /run/tlog 1777 root root -
+        dest: /etc/tmpfiles.d/tlog.conf
+        mode: "0640"
+    - name: check if /run/tlog exists
+      stat:
+        path: /run/tlog
+      register: st_tlog
+    - name: apply tmpfile
+      command: systemd-tmpfiles --create /etc/tmpfiles.d/tlog.conf
+      when: not st_tlog.stat.exists or st_tlog.stat.mode != '1777'
+    - name: add LC_ALL to /dev/environment
+      lineinfile:
+        line: LC_ALL=C.UTF-8
+        path: /etc/environment
+        state: present
+    - name: install tlogctl
+      copy:
+        src: tlogctl
+        dest: /usr/sbin/tlogctl
+        mode: "0700"
+        owner: root
+        group: root
+  when: ansible_distribution_major_version|int > 20

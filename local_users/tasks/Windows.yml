@@ -1,5 +1,10 @@
 ---
 - block:
+    - name: create facts directory
+      win_file:
+        path: "C:\\Ansible\\facts.d"
+        state: directory
+
     - name: Copy update facts file
       win_copy:
         src: "{{ item }}.ps1"
