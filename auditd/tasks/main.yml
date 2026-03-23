@@ -1,0 +1,88 @@
+---
+- name: install binary (Debian)
+  apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: present
+  notify: restart auditd
+  when: ansible_os_family == 'Debian'
+- block:
+    - name: install binary (RedHat)
+      yum:
+        name:
+          - audit
+          - audispd-plugins
+        state: present
+  notify: restart auditd
+  when: ansible_os_family == 'RedHat'
+- name: configure auditd
+  copy:
+    content: |
+      -a always,exit -F arch=b64 -F auid>=1000 -S execve -k user_exec
+      -a always,exit -F arch=b32 -F auid>=1000 -S execve -k user_exec
+      -w /etc/passwd -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/group  -p wa -k identity
+      -w /etc/sudoers -p wa -k privilege
+      -w /etc/sudoers.d/ -p wa -k privilege
+      -w /usr/sbin/sshd -p x -k sshd_exec
+      -w /usr/bin/sudo  -p x -k sudo_exec
+    dest: /etc/audit/rules.d/50-user-exec.rules
+    mode: "0640"
+    owner: root
+    group: root
+  notify: reload auditd rules
+- name: change audit log file
+  lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: '^log_file = .*'
+    line: "log_file = /var/log/audit/{{ inventory_hostname }}.log"
+  notify: restart auditd
+- stat:
+    path: "/var/log/audit/{{ inventory_hostname }}.log"
+  register: st_audit_log
+- name: create audit log file
+  file:
+    path: "/var/log/audit/{{ inventory_hostname }}.log"
+    state: touch
+    mode: "0700"
+  when: not st_audit_log.stat.exists or st_audit_log.stat.mode != "0700"
+- name: change rotation conf
+  lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: '^max_log_file = .*'
+    line: 'max_log_file = 50'
+  notify: restart auditd
+- name: change rotation conf
+  lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: '^num_logs = .*'
+    line: 'num_logs = 20'
+  notify: restart auditd
+- name: check if audit is enabled in grub
+  command: grep 'GRUB_CMDLINE_LINUX="audit=1' /etc/default/grub
+  failed_when: false
+  changed_when: false
+  register: grep_grub
+- name: enable auditd in grub
+  lineinfile:
+    path: /etc/default/grub
+    backrefs: true
+    state: present
+    regexp: 'GRUB_CMDLINE_LINUX="(.*)$'
+    line: 'GRUB_CMDLINE_LINUX="audit=1 \g<1>'
+  when: grep_grub.rc != 0
+- name: upgrade grub (Debian)
+  command: update-grub
+  when: 
+    - grep_grub.rc != 0
+    - ansible_os_family == 'Debian'
+- name: upgrade grub (RedHat)
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  when:
+    - grep_grub.rc != 0
+    - ansible_os_family == 'RedHat'

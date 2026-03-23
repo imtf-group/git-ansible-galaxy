@@ -5,7 +5,7 @@
     gid: 3657
     state: present
 
-- include: "{{ ansible_os_family }}.yml"
+- include_tasks: "{{ ansible_os_family }}.yml"
 
 - name: install pip docker
   pip:
