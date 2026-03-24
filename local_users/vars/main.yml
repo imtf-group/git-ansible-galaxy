@@ -1,8 +1,4 @@
 ---
-os_family_dict:
-  RedHat: Linux
-  Debian: Linux
-  Windows: Windows
 admin_user_dict:
   Debian: ubuntu
   RedHat: ec2-user
