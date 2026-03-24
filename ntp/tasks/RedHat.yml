@@ -10,7 +10,7 @@
 
 - name: disable timesyncd
   command: timedatectl set-ntp false
-  when: "'Network time on: no' not in time_conf.stdout and 'NTP enabled: no' not in time_conf.stdout"
+  when: "'NTP enabled: no' not in time_conf.stdout or 'NTP service: inactive' not in time_conf.stdout"
 
 - name: install ntp
   dnf:
