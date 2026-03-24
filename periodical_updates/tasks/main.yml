@@ -15,6 +15,7 @@
       loop:
         - 99periodic-updates
         - 90periodic-updates
+        - 10periodic
 
     - name: create periodical update file
       template:
