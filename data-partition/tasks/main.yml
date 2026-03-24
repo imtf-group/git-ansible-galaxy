@@ -3,4 +3,4 @@
   assert:
     that: data_dir is defined
 
-- include: "{{ os_family_dict[ansible_os_family] }}.yml"
+- include_tasks: "{{ os_family_dict[ansible_os_family] }}.yml"
