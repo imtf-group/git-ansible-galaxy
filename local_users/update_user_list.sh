@@ -27,7 +27,7 @@ fi
 
 LDAP_PASSWORD="$1"
 
-ldapsearch -h 10.2.0.6 -D ldapAmazon@imtf.com -w "${LDAP_PASSWORD}" -x -LLL -o nettimeout=1 \
+ldapsearch -H ldap://10.2.0.6 -D ldapAmazon@imtf.com -w "${LDAP_PASSWORD}" -x -LLL -o nettimeout=1 \
            -b OU=Deactivated,OU=Domain_Users,OU=Users,OU=IMTF,DC=IMTF,DC=LOCAL \
            "(objectClass=user)" sAMAccountName | grep sAMAccountName | sed 's/sAMAccountName: //1' | tr 'A-Z' 'a-z' | while read login; do
 
@@ -39,7 +39,7 @@ ldapsearch -h 10.2.0.6 -D ldapAmazon@imtf.com -w "${LDAP_PASSWORD}" -x -LLL -o n
 done
 
 python -c 'import yaml; print("\n".join(list(map(lambda x: x["name"], yaml.safe_load(open("vars/main.yml"))["user_dict"]))))' | while read login; do
-    if ! ldapsearch -h 10.2.0.6 -D ldapAmazon@imtf.com -w "${LDAP_PASSWORD}" -x -LLL -o nettimeout=1 \
+    if ! ldapsearch -H ldap://10.2.0.6 -D ldapAmazon@imtf.com -w "${LDAP_PASSWORD}" -x -LLL -o nettimeout=1 \
                     -b DC=IMTF,DC=LOCAL "(sAMAccountName=$login)" sAMAccountName | grep -q sAMAccountName; then
         if [ "$login" != "smiles" ] && [ "$login" != "alang" ]; then
             echo "$login not found in AD" >&2
