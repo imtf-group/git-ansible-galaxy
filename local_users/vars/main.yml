@@ -211,11 +211,6 @@ user_dict:
     comment: Roger Gogniat
     ssh_key:
       - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCptbfW1o6dM++HVLILy7vtc50Jikh41mw0qARhb/cKBRsoJhsQ5/zwRdL4RPKgIV2x9hYhhxshWePz55qzYmMXCHKCCyK6jq/Q+SOvPbzpjb9RIIDHEX62e2db+gDJ1BdvRN/Whsd+W7yJ6hkEDm+QatOoi1J3EQeqFw1ZF/GNZOyC5S7yV7g1TKFN+beWzrXrUXn9mlWPl8yIFQagRUdycdxa/8x4Yh4VaEwN1+Lo9mORvO5OFu7pez2NMyMdraEdTDqhdsXaRfe/0+ZYeRB7otMQWceWY4HAbYczMpUZlnM0NGHiSlY5PdYBYy1gxfdhz7SWjgyafsDIGeqI8YSx rgo@imtf.ch"
-  - name: xbu
-    uid: 5162
-    comment: Xavier Buchilly
-    ssh_key:
-      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCffNr9bSCGujkktFwusaOTzBtgmdWrA6f4IDGKeT/gAT5YT9nZrcKH13CXTgW4lQoQpRrnlFvBt9EaGuY8z2kDivsdaQnWvtMFYjuS8pp7WfTjUwUeBaH7uGHVHzR5KdtTv2Abfd1Uv7a5QudQBtHprwZesHJAaFdFPl9Zpp5QtQXhW5t8LzIllZ+ZAMf6o1uduhd9psH263S14avMoazbZAtyckXfQS8u/Y5szNEVzZZ7lx47ZBa7a7dZimSrlwuQirlxoi2T5mDajOdFwfU3gPijbezTIOVmdeHj2suilpVmtdvKRQo/l6ib3CB6A2F1atEYPMMCXldLhb/pD9We9nT1zVXWzo0bZDEqgGA8opKFPXTmNaWJl6Dcx2+mC1Mf0t5NhvPyRS47fgiJmgjm23HEzZ0F+RupE41shIYTARGc7x3hq/cdUa+yARSVqyDvEmq1D9JcAHs4klNPRaBcsIYHJBUcTvy5ZlX/BkUvlpcbJf4cO40VrNi5M2g7Qok= xbu@ltpxbu4"
   - name: pgu
     uid: 5165
     comment: Prachir Gupta
@@ -268,12 +263,6 @@ user_dict:
     comment: Janos Csakis
     ssh_key:
       - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCQyciTy8a0d3d31Nl8KhCWymfAzNohVCzO10KkEB0gg6n0P5mTOYh9npVTuPPmbGGurGZnltK/AvbjdNzE6XZHcamjTXwHA7Mrp31tygE282zoFMyqy1Wfddlv0ulysGFY/obPTx9X+zIGWP+HrPxSObOZ/pazwQTMg/zIg85dyMZPBjjN4WSTrujxMEmR7eTaZu7BTqECUrp4fK3yAafOiSLzycl9+qBe+Bg1GKNn7i7gxxeiano+Z68GUyHBeWODlzNCTug4qTcVFE3fHR6Q5850sdmC6/xieaC04zOez2rEX/zoCEaY4COMn8cAL6ePnDJKk7GEhQTi7zHHK27nkhCHsRNYHjfltfXS0LTu2Ag4Y/5ULLveRLayhitM8ix9TsvUWw7J41n3hd36xRYiURzwwqtzmym4DT8Zi0bZAB0dGw59zUeDhMTwM7HFG7FButd/aG0chHHqa79l2Nelq1Ks0MkVbnICFVD5/jxdcGxdJsNetl2KsqxzFhIE0c= janos.csikos@imtf.com"
-  - name: ama
-    uid: 5183
-    comment: Anisha Manoharan
-    ssh_key:
-      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC3dB9HzemHxjS68R/ZtiVojhvvxwqAMJDsznsymEEpAaQ57tUY7nR+RJQAPZPJ89NPq5bOQlYh5/j7U803F+QcoE58RSHEY8E983XX//VidYj+0VGFIj+cQvjnFEjArOx+O1FLH+v4/FEhhLvGfmmMKTo6MuKZ0XB5kjUPR+oB2BlD4FRPRNYOzzheY+RdH6WlILeFnmUqdSIGXSq6Sd0S0X3e7NoY//GIPQEZiHQ+NnZ5hu3BqthZ3Y86vIqfXr5KmGFZ9ShiiDwWmwEDn02EpWDufdzItWrkluTkY9eBMgdxyzHLyPcesN8kgTkqZo1KAcDPxUxgBM86j9uxq+KfK83BPw/8gmKjVJXim0nd/aZfU93trrPNe2jSEWIce0t/5TaVTF64XnsrJYsH3ICXPy9/UYgmjxpdnsHylFXUp7MNsrrFfOg8gLDB1UClng6kvTYZ678seBnhkJIe4WpbGVnCtrjDjvDFQsj4XsHa1Jr+JoNKGxfEU2kXxTQw2DU= ama@mbpama.local"
-      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDAu7fCOEGLuy/QE6jCffmqkGF3BTf1MWCdjg8S5oqkIakfaMYMlbvoIi45fNqYRUE9FOxbTl0rGPqtVgm+o8S3uPS9/32KqtbnY6O3S+t7RZr/bi4slreVTzPabpylZWmdnNn7TJu0UjrY2rw2DsK/ZvkHTEY/WKbW8aNLHepzuu6rKbgnC9sHfViea6GJMzgCPLb8RtxCiTxzeF87Qx/N357wcIyCr+mxfmCJdDAGnBqGkLl+8uCTDamVRkDUBV6zXa55tRgul7+Q7/za4KNnAtAYnmSCvmZhDcZNS7IMR4KFMGw+9c8NaXc4hhXF+ODKJEPWCrxX/YlblQhseXv08bNwfRB8QA22MKQU5d+DglE+N53Knzz5473FJ72HZlnhXT1wrj70ZmhoJMnYhfjKkYZuk351OP6IcCor8JP+XBXQ/pK03x0QfiwsSm7gxkpvAnLcbryry9V2B1PwnUWaAv6cCfBhETXR6xA1W20u0yZQ/kC3xOrKrgnFBns2mvM= ama@mbpama.local"
   - name: yzh
     uid: 5184
     comment: Yiwen Zhao
@@ -304,11 +293,6 @@ user_dict:
     comment: Vishwanatha Dinesha
     ssh_key:
       - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDq1qIcLUbsfjYFf9rjKOdo5tr5cupJjZ1xVPxOocVtQUQy5J4cnK/jiNE1UJKdDAl08AgtFjQNnGhNvbnbb5PNMt+TQfveYdIdQO610dbiFlscVC6Bi7PwhPxJwXHX2cflD15iArsf+NITW1rTuGmo6S2zgRT0VqlZ2/V2ng6hg4ES6yxyG2jZS5NZmAcTgH5bx14qS2cXNKMOOW0W++1FnR1sZdB6cAWgmICs/EngCb1Egckr7CCBzxa5ncsOKuRyvMIaHbasMB0IzErcVi5MM94SZdao+8OBCf7O+LPv72g7eVUdV559IVRKOwAYILXJELrN3vf032fBwmMsAu3WOG5WbytMJs5RxZpHQtdsns9BjMV10+tBSsc0ZqsS+AfCKS1WAR1F4rOLP69pVRYI/vxv+eJox9T/aCEcHwWo9poB1oSWcY+7l08Dm1JkGpib55OMyDihrxaYXHcUQ08W9E8O9tmQVwi6UdHzB2MKtukyA4sIn70TuySxFTn/jsE= dvi@mbpdvi.local"
-  - name: lch
-    uid: 5196
-    comment: Luke Chua
-    ssh_key:
-      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNUIlnOD0kDwnKBL8+mJCb4HA6UO48MyHWObEmIukOCMjS5exyO+yEKamrJqyTEIK97c5QbR+36FX6VHIAy3T3zCa+EOtp0tkVTLNKZrE2CDnUlFhMlWdgBcDz1QLAywCOVSo9KleVITCqdsJVAPZT9mICMLH9r3XwKSPspOZk+1nzGnnyoMAnDWCh98tPrrHZdXRoSUNED+iZs47ifzdtmdisuxKdc3oUl5iQzMd90Krx/97Eu+rXc9SYIbrvdtV7okp8FXVUvPcxpjD6TFFgoOSJlGzy141g4+eAoGer4GgJiDtTESPglgQiHOfKlnsFAAcA0E6NwTo+m4rIaM5MmqmpLZmAKZ6cyBMzN4zUO04vMl0L9IsxOVxSt9r4DQ0S7jNbbQRIK/qaacVlfqn9lFHi39INgPCvtxTLWYGEjx7A5zPYygDsGPR+N9IBuLstHls6mYfZL9cAP1pA/dhIuTFPblB0uUR32PjvSyQTcmUOoDAsBKHy9VQ4VmKX2E= lch@mbalch.local"
   - name: kpe
     uid: 5197
     comment: Perumal Karthik
