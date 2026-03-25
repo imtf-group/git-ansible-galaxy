@@ -46,7 +46,7 @@
   file:
     path: "/var/log/audit/{{ inventory_hostname }}.log"
     state: touch
-    mode: "0700"
+    mode: "0640"
   when: not st_audit_log.stat.exists or st_audit_log.stat.mode != "0700"
 - name: change rotation conf
   lineinfile:
