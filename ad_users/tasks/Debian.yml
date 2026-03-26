@@ -92,15 +92,13 @@
     mode: "0644"
 
 - name: check PAM configuration
-  command: cat /var/lib/pam/seen
-  changed_when: false
+  command: grep -q groups /var/lib/pam/seen
+  failed_when: false
   register: pam_conf
 
 - name: update pam
   command: pam-auth-update --enable mkhomedir --enable groups
-  when:
-    - "'stdout' in pam_conf"
-    - "'groups' not in pam_conf.stdout"
+  when: pam_conf.rc == 1
   environment:
     DEBIAN_FRONTEND: noninteractive
     LC_ALL: C.UTF-8
