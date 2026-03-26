@@ -94,6 +94,7 @@
 - name: check PAM configuration
   command: grep -q groups /var/lib/pam/seen
   failed_when: false
+  changed_when: false
   register: pam_conf
 
 - name: update pam
