@@ -26,7 +26,7 @@ if useradd -u {{ user.uid }} -m -G users -N -s "$shell" -c "{{ user.comment }}" 
     echo "user {{ user.name }} created"
 fi
 {% else %}
-if [ -f /usr/bin/tlog-rec-session ] && [ "$(grep '^{{ user.name }}' /etc/passwd  | cut -d: -f7)" != "/usr/bin/tlog-rec-session" ]; then
+if [ -f /usr/bin/tlog-rec-session ] && [ "$(grep '^{{ user.name }}:' /etc/passwd  | cut -d: -f7)" != "/usr/bin/tlog-rec-session" ]; then
     if usermod -s /usr/bin/tlog-rec-session {{ user.name }}; then
         echo "user {{ user.name }} shell updated"
     fi

@@ -29,7 +29,6 @@
   dnf:
     name:
       - container-selinux
-      - "{% if ansible_distribution_major_version|int < 8 %}python-docker-py{% else %}python3-docker{% endif %}"
       - docker-ce
       - docker-ce-cli
       - containerd.io
@@ -37,3 +36,9 @@
     state: present
     update_cache: true
   notify: start docker
+
+- name: install docker
+  dnf:
+    name: python-docker-py
+    state: present
+  when: ansible_distribution_major_version|int < 8
