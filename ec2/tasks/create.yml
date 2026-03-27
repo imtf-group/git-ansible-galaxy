@@ -1,6 +1,6 @@
 ---
 - name: search for corresponding AMI
-  ec2_ami_info:
+  amazon.aws.ec2_ami_info:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     region: "{{ aws_region }}"
@@ -9,7 +9,7 @@
   register: ami_fact
 
 - name: search for corresponding AMI
-  ec2_ami_info:
+  amazon.aws.ec2_ami_info:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     region: "{{ aws_region }}"
@@ -18,13 +18,6 @@
   register: ami_list
   when: "'image_name' in item"
   loop: "{{ server_opts|flatten(levels=1) }}"
-
-#- name: Stop if no AMI were found
-#  fail:
-#    msg: "No AMI found among: {{ server_opts|flatten(levels=1)|map(attribute='image_name')|list }}"
-#  when:
-#    - item is not skipped
-#    - ami_list.results|length == 0 or ami_list.results|selectattr('images')|list|length == 0
 
 - name: create AMI list
   set_fact:
@@ -52,7 +45,7 @@
     fail_msg: "tag_environmenttype value must be one of: {{ environmenttype_dict }}"
 
 - name: check if the instances already exist
-  ec2_instance_info:
+  amazon.aws.ec2_instance_info:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     region: "{{ aws_region }}"
@@ -67,14 +60,14 @@
 
 - block:
     - name: "get the subnet list in {{ aws_region }}"
-      ec2_vpc_subnet_info:
+      amazon.aws.ec2_vpc_subnet_info:
         aws_access_key: "{{ aws.access_key }}"
         aws_secret_key: "{{ aws.secret_key }}"
         region: "{{ aws_region }}"
       register: ec2_subnet_list
 
     - name: "check availability-zones in {{ aws_region }}"
-      ec2_instance_info:
+      amazon.aws.ec2_instance_info:
         aws_access_key: "{{ aws.access_key }}"
         aws_secret_key: "{{ aws.secret_key }}"
         region: "{{ aws_region }}"
@@ -100,7 +93,7 @@
 
     - name: set instance sizing (multi-server)
       set_fact:
-        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'volume_size': item.volumes[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'ebs': {'volume_type': 'gp3', 'volume_size': item.volumes[i], 'delete_on_termination': True}, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
           'tags': {'Index': item.id, 'Name': instance_name_lower, 'AMIName': item.image_name|d(image_name)},
           'type': item.type|d(instance_type),
           'volumes': vols,
@@ -117,7 +110,7 @@
         index_var: index
     - name: set instance sizing (multi-server)
       set_fact:
-        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'volume_size': item.volumes[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+        instance_details: "{% set vols = [] %}{% for i in range(item.volumes|d([])|length) %}{% set vols = vols.append({'ebs': {'volume_type': 'gp3', 'volume_size': item.volumes[i], 'delete_on_termination': True}, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
           'tags': {'Index': item.id, 'Name': instance_name_lower, 'AMIName': item.image_name|d(image_name)},
           'type': item.type|d(instance_type),
           'volumes': vols,
@@ -134,7 +127,7 @@
         index_var: index
     - name: set instance sizing (one-server)
       set_fact:
-        instance_details: "{% set vols = [] %}{% for i in range(server_opts[0].volumes|d(other_volumes)|length) %}{% set vols = vols.append({'volume_size': (server_opts[0].volumes|d(other_volumes))[i], 'delete_on_termination': True, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
+        instance_details: "{% set vols = [] %}{% for i in range(server_opts[0].volumes|d(other_volumes)|length) %}{% set vols = vols.append({'ebs': {'volume_type': 'gp3', 'volume_size': (server_opts[0].volumes|d(other_volumes))[i], 'delete_on_termination': True}, 'device_name': '/dev/sd' + 'fghijklmopqrstuvwxyz'[i]}) %}{% endfor %}{{ instance_details|default([]) + [{
           'tags': {'Name': instance_name_lower, 'AMIName': server_opts[0].image_name|d(image_name)},
           'type': server_opts[0].type|d(instance_type),
           'volumes': vols,
@@ -165,33 +158,33 @@
         - tag_product in url_dict
 
     - name: instance creation
-      ec2:
+      amazon.aws.ec2_instance:
         aws_access_key: "{{ aws.access_key }}"
         aws_secret_key: "{{ aws.secret_key }}"
         region: "{{ aws_region }}"
-        image: "{{ item.image }}"
+        image_id: "{{ item.image }}"
         instance_type: "{{ item.type }}"
-        instance_profile_name: "{{ instance_role }}"
+        iam_instance_profile: "{{ instance_role }}"
         instance_initiated_shutdown_behavior: "{{ shutdown_behavior }}"
         key_name: "{{ key_pair }}"
-        vpc_subnet_id: "{{ item.subnet }}"
-        group: "{{ item.sg }}"
         user_data: "{% if 'windows' not in image_name|lower %}{{ lookup('file', 'user_data.sh') }}{% else %}{{ omit }}{% endif %}"
         count: 1
-        assign_public_ip: "{{ item.is_public }}"
-        instance_tags: "{{ item.tags|default({})|combine(instance_tags) }}"
-        volumes: "{{ [{'device_name': '/dev/sda1', 'volume_type': 'gp2', 'volume_size': item.root_volume_size, 'delete_on_termination': True}] + item.volumes }}"
+        network_interfaces:
+          - assign_public_ip: "{{ item.is_public }}"
+            subnet_id: "{{ item.subnet }}"
+            groups: "{{ item.sg }}"
+        tags: "{{ item.tags|default({})|combine(instance_tags) }}"
+        volumes: "{{ [{'device_name': '/dev/sda1', 'ebs': {'volume_type': 'gp3', 'volume_size': item.root_volume_size, 'delete_on_termination': True}}] + item.volumes }}"
         state: present
         termination_protection: "{% if tag_environmenttype == 'DEMO' %}true{% else %}false{% endif %}"
         wait: "{{ volume_id is defined or from_snapshot is defined }}"
       register: ec2_new
       loop: "{{ instance_details|default([]) }}"
-
   when: ec2_existing.instances|length == 0 or force|default(False)|bool
 
 - block:
     - name: stop newly created instance
-      ec2_instance:
+      amazon.aws.ec2_instance:
         aws_access_key: "{{ aws.access_key }}"
         aws_secret_key: "{{ aws.secret_key }}"
         region: "{{ aws_region }}"
@@ -200,7 +193,7 @@
       loop: "{{ ec2_new.results|map(attribute='instance_ids')|list|flatten }}"
 
     - name: volume attachment
-      ec2_vol:
+      amazon.aws.ec2_vol:
         aws_access_key: "{{ aws.access_key }}"
         aws_secret_key: "{{ aws.secret_key }}"
         region: "{{ aws_region }}"
@@ -215,20 +208,37 @@
     - ec2_existing.instances|length == 0
     - volume_id is defined or from_snapshot is defined
 
-- name: instance running
-  ec2_instance:
+- name: Wait until instance is in a stable state
+  amazon.aws.ec2_instance_info:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     region: "{{ aws_region }}"
     filters:
       "tag:Name": "{{ instance_name_lower }}"
-      instance-state-name: [ "pending", "running", "stopping", "stopped" ]
+      instance-state-name:
+        - pending
+        - stopping
+  register: ec2_wait
+  until: ec2_wait.instances | length == 0
+  retries: 60
+  delay: 10
+
+- name: instance running
+  amazon.aws.ec2_instance:
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ instance_name_lower }}"
+      instance-state-name:
+        - running
+        - stopped
     state: running
     wait: true
   register: ec2_inst
 
 - name: set volume name tag
-  ec2_tag:
+  amazon.aws.ec2_tag:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     resource: "{{ item.1.ebs.volume_id }}"
@@ -239,7 +249,7 @@
   loop: "{{ query('subelements', ec2_inst.instances, 'block_device_mappings') }}"
 
 - name: set network interfaces name tag
-  ec2_tag:
+  amazon.aws.ec2_tag:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     region: "{{ aws_region }}"
@@ -250,7 +260,7 @@
   ignore_errors: true
 
 - name: add server to dns server
-  route53:
+  amazon.aws.route53:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     command: create
@@ -267,7 +277,7 @@
   loop: "{{ ec2_inst.instances|product([True, False])|list }}"
 
 - name: add server to dns server
-  route53:
+  amazon.aws.route53:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     command: create
@@ -282,7 +292,7 @@
   loop: "{{ ec2_inst.instances|product([True, False])|list }}"
 
 - name: add public ip to dns server
-  route53:
+  amazon.aws.route53:
     aws_access_key: "{{ aws.access_key }}"
     aws_secret_key: "{{ aws.secret_key }}"
     command: create

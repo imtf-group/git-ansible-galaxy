@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 Port 22
 ListenAddress 0.0.0.0
 PubkeyAuthentication yes
@@ -9,4 +10,4 @@ X11Forwarding yes
 PrintMotd no
 PermitRootLogin no
 AcceptEnv LANG LC_*
-Subsystem sftp /usr/lib/openssh/sftp-server
+Subsystem sftp {{ sftp_server_bin }}

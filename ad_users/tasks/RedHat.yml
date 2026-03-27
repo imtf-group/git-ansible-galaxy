@@ -74,16 +74,20 @@
     line: "auth optional pam_group.so use_first_pass"
     state: present
 
+- name: override default sftp-server binary
+  set_fact:
+    sftp_server_bin: /usr/libexec/openssh/sftp-server
+
 - name: update SSH configuration
-  copy:
-    src: sshd_config
+  template:
+    src: sshd_config.j2
     dest: /etc/ssh/sshd_config
     mode: "0644"
   notify: restart ssh
 
 - name: add sudoers configuration
-  template:
-    src: sudoers.j2
+  copy:
+    src: sudoers
     dest: /etc/sudoers.d/users
     mode: "0644"
     validate: "/usr/sbin/visudo -cf %s"
