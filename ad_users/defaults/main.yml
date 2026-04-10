@@ -6,3 +6,4 @@ ad_bind_dn: Administrator
 ad_bind_password: password
 ad_domain_name: IMTF.COM
 ad_default_shell: /bin/bash
+sftp_server_bin: /usr/lib/openssh/sftp-server

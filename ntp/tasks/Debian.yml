@@ -17,7 +17,9 @@
         name: ntp
         enabled: false
         state: stopped
-      when: "'ntp.service' in ansible_facts.services"
+      when:
+        - "'ntp.service' in ansible_facts.services"
+        - "ansible_facts.services['ntp.service'].status != 'not-found'"
 
     - name: Register systemd-timesyncd at startup
       systemd:

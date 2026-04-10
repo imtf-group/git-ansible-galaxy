@@ -37,10 +37,10 @@
       when: ansible_os_family == 'RedHat'
 
     - name: "create new partition /dev/{{ new_disk_name }}{% if 'nvm' in new_disk_name %}p1{% else %}1{% endif %}"
-      partition:
+      community.general.parted:
         device: "/dev/{{ new_disk_name }}"
-        path: "/dev/{{ new_disk_name }}{% if 'nvm' in new_disk_name %}p1{% else %}1{% endif %}"
-        flags: lvm
+        number: 1
+        flags: [lvm]
         state: present
     - name: create datavg volume group
       lvg:
