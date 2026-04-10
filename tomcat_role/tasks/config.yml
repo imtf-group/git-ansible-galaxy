@@ -14,7 +14,7 @@
     mode: 0640
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_group }}"
-  with_items:
+  loop:
     - { src: "tomcat-users.xml.j2", dest: "{{ tomcat_conf_path }}/tomcat-users.xml" }
     - { src: "server.xml.j2", dest: "{{ tomcat_conf_path }}/server.xml" }
     - { src: "setenv.sh.j2", dest: "{{ tomcat_bin_path }}/setenv.sh" }
@@ -28,9 +28,7 @@
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_group }}"
     mode: 0640
-  with_filetree:
-    - "{{ tomcat_extra_conf_path }}/"
-    - "{{ tomcat_extra_conf_template_path }}/"
+  loop: "{{ query('filetree', tomcat_extra_conf_path, tomcat_extra_conf_template_path) }}"
   when: item.state == "directory"
   notify: restart tomcat
 
@@ -41,8 +39,7 @@
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_group }}"
     mode: 0640
-  with_filetree:
-    - "{{ tomcat_extra_conf_path }}/"
+  loop: "{{ query('filetree', tomcat_extra_conf_path) }}"
   when: item.state == "file"
   notify: restart tomcat
 
@@ -53,7 +50,6 @@
     owner: "{{ tomcat_user }}"
     group: "{{ tomcat_group }}"
     mode: 0640
-  with_filetree:
-    - "{{ tomcat_extra_conf_template_path }}/"
+  loop: "{{ query('filetree', tomcat_extra_conf_template_path) }}"
   when: item.state == "file"
   notify: restart tomcat

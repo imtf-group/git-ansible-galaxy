@@ -1,0 +1,40 @@
+---
+- name: Check if awscli is installed
+  stat:
+    path: "{{ awscli_bin_dir }}/aws"
+  register: st_awscli
+
+- block:
+    - name: Uninstall awscli
+      package:
+        name: awscli
+        state: absent
+
+    - name: create temporary directory
+      tempfile:
+        path: /tmp
+        state: directory
+      register: awscli_tmp
+
+    - name: download awscli
+      get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip"
+        dest: "{{ awscli_tmp.path }}/awscliv2.zip"
+        mode: "0644"
+
+    - name: Uncompress awscli
+      unarchive:
+        src: "{{ awscli_tmp.path }}/awscliv2.zip"
+        dest: "{{ awscli_tmp.path }}/"
+        remote_src: true
+
+    - name: Install awscli
+      command: "./aws/install --bin-dir {{ awscli_bin_dir }} --install-dir {{ awscli_data_dir }} --update"
+      args:
+        chdir: "{{ awscli_tmp.path }}"
+
+    - name: delete temporary directory
+      file:
+        path: "{{ awscli_tmp.path }}"
+        state: absent
+  when: not st_awscli.stat.exists
