@@ -85,12 +85,21 @@
     mode: "0644"
   notify: restart ssh (redhat)
 
-- name: add sudoers configuration
+- name: add sudoers configuration (RH7)
+  copy:
+    src: sudoers.rh7
+    dest: /etc/sudoers.d/users
+    mode: "0644"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: ansible_distribution_major_version|int < 8
+
+- name: add sudoers configuration (RH>7)
   copy:
     src: sudoers
     dest: /etc/sudoers.d/users
     mode: "0644"
     validate: "/usr/sbin/visudo -cf %s"
+  when: ansible_distribution_major_version|int >= 8
 
 - name: delete old sudoers configuration
   file:
