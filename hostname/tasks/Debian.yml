@@ -9,24 +9,34 @@
     dest: /etc/hosts
     mode: "0644"
 
-- name: install resolvconf package on Debian
-  package:
-    name: resolvconf
-    state: present
+- block:
+    - name: install resolvconf package on Debian
+      package:
+        name: resolvconf
+        state: present
 
-- name: update resolv.conf
+    - name: update resolv.conf
+      copy:
+        content: "search {{ hostname_domain }}"
+        dest: /etc/resolvconf/resolv.conf.d/base
+      register: upt_resolv
+
+    - name: add google DNS if Proxmox
+      copy:
+        content: nameserver 8.8.8.8
+        dest: /etc/resolvconf/resolv.conf.d/tail
+      register: upt_resolv_2
+      when: ansible_system_vendor == 'QEMU'
+
+    - name: update resolv.conf
+      command: resolvconf -u
+      when: upt_resolv is changed or upt_resolv_2 is changed
+  when: ansible_distribution_major_version|int < 24
+
+- name: configure systemd-resolved
   copy:
-    content: "search {{ hostname_domain }}"
-    dest: /etc/resolvconf/resolv.conf.d/base
-  register: upt_resolv
-
-- name: add google DNS if Proxmox
-  copy:
-    content: nameserver 8.8.8.8
-    dest: /etc/resolvconf/resolv.conf.d/tail
-  register: upt_resolv_2
-  when: ansible_system_vendor == 'QEMU'
-
-- name: update resolv.conf
-  command: resolvconf -u
-  when: upt_resolv is changed or upt_resolv_2 is changed
+    content: |
+      [Resolve]
+      Domains={{ hostname_domain }}
+    dest: /etc/systemd/resolved.conf
+  when: ansible_distribution_major_version|int >= 24
