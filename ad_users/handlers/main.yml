@@ -24,7 +24,12 @@
     name: systemd-logind
     state: restarted
 
-- name: restart ssh
+- name: restart ssh (ubuntu)
+  systemd:
+    name: ssh
+    state: restarted
+
+- name: restart ssh (redhat)
   systemd:
     name: sshd
     state: restarted
