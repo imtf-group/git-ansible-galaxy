@@ -1,0 +1,3 @@
+Defaults        listpw=never
+
+%openvpnusers ALL=(ALL) NOPASSWD:ALL
