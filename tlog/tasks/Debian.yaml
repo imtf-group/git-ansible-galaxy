@@ -70,13 +70,15 @@
       getent:
         database: passwd
         key: "{{ item }}"
-      loop: "{{ techinal_users }}"
+      loop: "{{ technical_users }}"
       failed_when: false
     - name: Update shell if technical users exist
       user:
         name: "{{ item }}"
         shell: /usr/bin/tlog-rec-session
-      when: item in ansible_facts.getent_passwd
-      loop: "{{ techinal_users }}"
+      when:
+        - "'getent_passwd' in ansible_facts"
+        - item in ansible_facts.getent_passwd
+      loop: "{{ technical_users }}"
       failed_when: false
   when: ansible_distribution_major_version|int > 20
