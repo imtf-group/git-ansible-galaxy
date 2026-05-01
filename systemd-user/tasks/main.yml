@@ -1,0 +1,75 @@
+- name: create sironadmin group
+  group:
+    name: "{{ linger_group }}"
+    gid: "{{ linger_gid }}"
+    state: present
+- name: create sironadmin user
+  user:
+    name: "{{ linger_user }}"
+    uid: "{{ linger_uid }}"
+    group: "{{ linger_group }}"
+    groups:
+      - wheel
+      - systemd-journal
+    append: true
+    home: "{{ linger_homedir }}"
+    shell: /bin/bash
+    state: present
+- name: check lingering
+  command: "loginctl show-user {{ linger_user }} -p Linger --value"
+  changed_when: false
+  failed_when: false
+  register: systemd_is_lingering
+- name: enable lingering
+  command: "loginctl enable-linger {{ linger_user }}"
+  when: "'Failed to get user' in systemd_is_lingering.stderr or systemd_is_lingering.stdout == 'no'"
+- name: create systemctl directory
+  file:
+    path: "{{ linger_homedir }}/.config/systemd/user"
+    group: "{{ linger_group }}"
+    owner: "{{ linger_user }}"
+    state: directory
+    recurse: true
+- name: Create workspace note for user
+  copy:
+    dest: "{{ linger_homedir }}/.config/systemd/user/README"
+    group: "{{ linger_group }}"
+    owner: "{{ linger_user }}"
+    mode: "0644"
+    content: |
+      Place your user services here, for example:
+        /app/.config/systemd/user/tomcat.service
+      Do not set the User= directive.
+
+      Then use:
+        systemctl --user daemon-reload
+        systemctl --user enable tomcat
+        systemctl --user start tomcat
+        systemctl --user status tomcat
+- stat:
+    path: /etc/profile.d/xdg_runtime_dir.sh
+  register: st_xdg_runtime_dir
+- name: create script to add XDG_RUNTIME_DIR variable
+  copy:
+    dest: /etc/profile.d/xdg_runtime_dir.sh
+    mode: "0644"
+    content: |
+      if [ -z "${XDG_RUNTIME_DIR}" ] && [ -d "/run/user/$(id -u)" ]; then
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+      fi
+  when: not st_xdg_runtime_dir.stat.exists
+- name: check if journal data are persistent
+  stat:
+    path: /var/log/journal
+  register: st_journal
+- block:
+    - name: enable journal persistence
+      file:
+        path: /var/log/journal
+        state: directory
+    - name: enable journal persistence
+      command: systemd-tmpfiles --create --prefix /var/log/journal
+    - systemd_service:
+        name: systemd-journald
+        state: restarted
+  when: not st_journal.stat.exists
