@@ -5,7 +5,12 @@ Cmnd_Alias OPENVPN_SU = \
     /usr/bin/su - icos, \
     /usr/bin/su - siron, \
     /usr/bin/su - sironadmin, \
-    /usr/bin/su - ec2-user
+    /usr/bin/su - ec2-user, \
+    /bin/su - ubuntu, \
+    /bin/su - icos, \
+    /bin/su - siron, \
+    /bin/su - sironadmin, \
+    /bin/su - ec2-user
 
 Cmnd_Alias OPENVPN_PKG = \
     /usr/bin/apt update, \
@@ -14,6 +19,11 @@ Cmnd_Alias OPENVPN_PKG = \
     /usr/bin/yum install *
 
 Cmnd_Alias OPENVPN_SYSTEMCTL = \
+    /bin/systemctl status *, \
+    /bin/systemctl start *, \
+    /bin/systemctl restart *, \
+    /bin/systemctl reload *, \
+    /bin/systemctl stop *, \
     /usr/bin/systemctl status *, \
     /usr/bin/systemctl start *, \
     /usr/bin/systemctl restart *, \
