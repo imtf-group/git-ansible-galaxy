@@ -1,0 +1,20 @@
+Defaults        listpw=never
+
+Cmnd_Alias OPENVPN_SU = \
+    /bin/su - icos, \
+    /bin/su - siron, \
+    /bin/su - sironadmin, \
+    /bin/su - ubuntu
+
+Cmnd_Alias OPENVPN_PKG = \
+    /usr/bin/apt update, \
+    /usr/bin/apt install *
+
+Cmnd_Alias OPENVPN_SYSTEMCTL = \
+    /bin/systemctl status *, \
+    /bin/systemctl start *, \
+    /bin/systemctl restart *, \
+    /bin/systemctl reload *, \
+    /bin/systemctl stop *
+
+%openvpnusers ALL=(root) NOPASSWD: OPENVPN_SU, OPENVPN_PKG, OPENVPN_SYSTEMCTL
