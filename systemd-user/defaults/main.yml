@@ -1,0 +1,5 @@
+linger_group: sironadmin
+linger_user: sironadmin
+linger_gid: 54323
+linger_uid: 54322
+linger_homedir: /app
