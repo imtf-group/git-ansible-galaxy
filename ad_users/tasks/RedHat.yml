@@ -87,7 +87,7 @@
 
 - name: add sudoers configuration (RH7)
   copy:
-    src: sudoers.rh7
+    src: sudoers.RedHat7
     dest: /etc/sudoers.d/users
     mode: "0644"
     validate: "/usr/sbin/visudo -cf %s"
@@ -95,7 +95,7 @@
 
 - name: add sudoers configuration (RH>7)
   copy:
-    src: sudoers
+    src: sudoers.RedHat
     dest: /etc/sudoers.d/users
     mode: "0644"
     validate: "/usr/sbin/visudo -cf %s"

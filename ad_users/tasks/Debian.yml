@@ -104,12 +104,21 @@
     DEBIAN_FRONTEND: noninteractive
     LC_ALL: C.UTF-8
 
-- name: add sudoers configuration
+- name: add sudoers configuration (Ubuntu18)
   copy:
-    src: sudoers
+    src: sudoers.Ubuntu18
     dest: /etc/sudoers.d/users
     mode: "0644"
     validate: "/usr/sbin/visudo -cf %s"
+  when: ansible_distribution_major_version|int < 20
+
+- name: add sudoers configuration (Ubuntu20+)
+  copy:
+    src: sudoers.Ubuntu
+    dest: /etc/sudoers.d/users
+    mode: "0644"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: ansible_distribution_major_version|int >= 20
 
 - name: delete old sudoers configuration
   file:
