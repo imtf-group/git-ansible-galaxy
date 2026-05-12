@@ -18,3 +18,7 @@ Cmnd_Alias OPENVPN_SYSTEMCTL = \
     /bin/systemctl stop *
 
 %openvpnusers ALL=(root) NOPASSWD: OPENVPN_SU, OPENVPN_PKG, OPENVPN_SYSTEMCTL
+%openvpnusers ALL=(ubuntu) NOPASSWD: ALL
+%openvpnusers ALL=(icos) NOPASSWD: ALL
+%openvpnusers ALL=(siron) NOPASSWD: ALL
+%openvpnusers ALL=(sironadmin) NOPASSWD: ALL
