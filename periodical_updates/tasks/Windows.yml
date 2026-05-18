@@ -1,0 +1,93 @@
+---
+- block:
+    - name: ensure directories exist
+      ansible.windows.win_file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "C:\\ProgramData\\Ansible\\State"
+        - "C:\\ProgramData\\Ansible\\Logs"
+
+    - name: check whether Windows Update has to run
+      ansible.windows.win_powershell:
+        script: |
+          $updateStateFile = "C:\ProgramData\Ansible\State\windows-update-last-run.txt"
+          $today = Get-Date -Format 'yyyy-MM-dd'
+
+          if (Test-Path $updateStateFile) {
+            $last = Get-Content $updateStateFile -ErrorAction SilentlyContinue
+            if ($last -eq $today) {
+              "ran_today"
+              exit 0
+            }
+          }
+
+          $task = Get-ScheduledTask -TaskName "Ansible-PSWindowsUpdate" -ErrorAction SilentlyContinue
+
+          if ($null -eq $task) {
+            "should_run"
+          } elseif ($task.State -eq "Running" -or $task.State -eq "Queued") {
+            "running"
+          } else {
+            "should_run"
+          }
+          exit 0
+      register: windows_updates_state
+      changed_when: false
+
+    - name: launch Windows Update
+      ansible.windows.win_powershell:
+        script: |
+          $ErrorActionPreference = 'Stop'
+          Install-PackageProvider -Name NuGet -Force
+          Install-Module PSWindowsUpdate -Force -Confirm:$false
+          Import-Module PSWindowsUpdate
+
+          $log = "C:\ProgramData\Ansible\Logs\pswindowsupdate.log"
+          $updateStateFile = "C:\ProgramData\Ansible\State\windows-update-last-run.txt"
+          $today = Get-Date -Format 'yyyy-MM-dd'
+
+          Invoke-WUJob `
+            -TaskName "Ansible-PSWindowsUpdate" `
+            -Script "Import-Module PSWindowsUpdate; Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -IgnoreReboot -Verbose | Out-File '$log' -Append" `
+            -Confirm:$false `
+            -RunNow
+
+          $today | Out-File $updateStateFile -Encoding ascii
+
+          $elapsed = 0
+
+          while ($true) {
+            $task = Get-ScheduledTask -TaskName "Ansible-PSWindowsUpdate" -ErrorAction SilentlyContinue
+
+            if ($null -eq $task) {
+              break
+            }
+
+            if ($task.State -ne "Running" -and $task.State -ne "Queued") {
+              break
+            }
+
+            if ($elapsed -ge 7200) {
+              throw "Timeout waiting for Windows Update task Ansible-PSWindowsUpdate"
+            }
+
+            Start-Sleep -Seconds 10
+            $elapsed += 10
+          }
+
+          if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') {
+            "reboot_required"
+            exit 0
+          }
+
+          if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') {
+            "reboot_required"
+            exit 0
+          }
+          "reboot_not_required"
+
+      when: "'should_run' in windows_updates_state.output"
+  when:
+    - periodical_updates_enabled|bool
+    - ansible_distribution_version != '6.3.9600.0'
