@@ -90,4 +90,3 @@
       when: "'should_run' in windows_updates_state.output"
   when:
     - periodical_updates_enabled|bool
-    - ansible_distribution_version != '6.3.9600.0'
