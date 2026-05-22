@@ -39,8 +39,11 @@
       ansible.windows.win_powershell:
         script: |
           $ErrorActionPreference = 'Stop'
-          Install-PackageProvider -Name NuGet -Force
-          Install-Module PSWindowsUpdate -Force -Confirm:$false
+          if (-not (Get-Module PSWindowsUpdate -ListAvailable)) {
+              [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+              Install-PackageProvider -Name NuGet -Force
+              Install-Module PSWindowsUpdate -Force -Confirm:$false
+          }
           Import-Module PSWindowsUpdate
 
           $log = "C:\ProgramData\Ansible\Logs\pswindowsupdate.log"
