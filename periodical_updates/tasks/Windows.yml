@@ -35,15 +35,27 @@
       register: windows_updates_state
       changed_when: false
 
-    - name: launch Windows Update
+    - name: ensure PSWindowsUpdate is installed
       ansible.windows.win_powershell:
         script: |
           $ErrorActionPreference = 'Stop'
           if (-not (Get-Module PSWindowsUpdate -ListAvailable)) {
               [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-              Install-PackageProvider -Name NuGet -Force
+              Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+              Import-PackageProvider NuGet -Force
+              if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+                  Register-PSRepository -Default
+              }
+              Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
               Install-Module PSWindowsUpdate -Force -Confirm:$false
           }
+
+      when: "'should_run' in windows_updates_state.output"
+
+    - name: launch Windows Update
+      ansible.windows.win_powershell:
+        script: |
+          $ErrorActionPreference = 'Stop'
           Import-Module PSWindowsUpdate
 
           $log = "C:\ProgramData\Ansible\Logs\pswindowsupdate.log"
