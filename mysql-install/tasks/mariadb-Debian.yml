@@ -22,15 +22,13 @@
   apt:
     state: present
     update_cache: true
+    lock_timeout: 600
     name:
       - "mariadb-server-{{ mysql_version }}"
       - python3-mysqldb
       - python3-mysql.connector
       - iputils-ping
   register: db_pkg
-  until: db_pkg is success
-  retries: 10
-  delay: 15
 
 - name: Stop mariadb before configuration
   service:

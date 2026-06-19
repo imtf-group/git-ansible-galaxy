@@ -9,6 +9,7 @@
   apt:
     state: present
     update_cache: true
+    lock_timeout: 600
     allow_unauthenticated: true
     name:
       - mysql-server
@@ -16,10 +17,6 @@
       - python3-mysql.connector
       - iputils-ping
   register: db_pkg
-  until: db_pkg is success
-  retries: 10
-  delay: 15
-
 - name: Stop MySQL before configuration
   service:
     name: mysql
