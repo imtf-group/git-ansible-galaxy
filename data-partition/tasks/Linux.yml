@@ -21,13 +21,8 @@
         name: "{{ partition_pkg_dict['Debian'] }}"
         state: present
         update_cache: true
+        lock_timeout: 600
       when: ansible_os_family == 'Debian'
-      register: apt_action
-      retries: 100
-      until: >
-        apt_action is success or
-        ('Failed to lock apt for exclusive operation' not in apt_action.msg
-        and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
 
     - name: install parted (RedHat)
       yum:
