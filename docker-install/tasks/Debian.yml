@@ -25,12 +25,7 @@
       - gnupg
     update_cache: true
     state: present
-  register: apt_action
-  retries: 100
-  until: >
-    apt_action is success or
-    ('Failed to lock apt for exclusive operation' not in apt_action.msg
-    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+    lock_timeout: 600
 
 - name: install docker
   apt:
@@ -40,10 +35,5 @@
       - containerd.io
       - python3-pip
     state: present
+    lock_timeout: 600
   notify: start docker
-  register: apt_action
-  retries: 100
-  until: >
-    apt_action is success or
-    ('Failed to lock apt for exclusive operation' not in apt_action.msg
-    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)

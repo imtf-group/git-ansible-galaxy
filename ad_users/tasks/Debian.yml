@@ -18,14 +18,7 @@
       - ldap-utils
     update_cache: true
     state: present
-  register: apt_action
-  retries: 100
-  until: >
-    apt_action is success or
-    ('Failed to lock apt for exclusive operation' not in apt_action.msg
-    and 'Failed to update apt cache' not in apt_action.msg
-    and 'Could not get lock' not in apt_action.msg
-    and 'Unable to acquire the dpkg frontend lock' not in apt_action.msg)
+    lock_timeout: 600
 
 - name: check if tlog is installed
   stat:
