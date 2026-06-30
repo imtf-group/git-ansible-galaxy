@@ -1,5 +1,6 @@
 ---
 - name: reload ssh
   systemd:
-    name: sshd
+    name: "{% if ansible_os_family == 'Debian' %}ssh{% else %}sshd{% endif %}"
     state: reloaded
+
